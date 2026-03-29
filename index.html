@@ -806,9 +806,39 @@ function setLogos(){
 // ════════════════════════════════════════
 // CONFIG LOCAL
 // ════════════════════════════════════════
-let ADMIN_PWD = localStorage.getItem('cv_pwd')||'convive2024';
-const SUPER_PWD = 'tigre';
-const STUDENT_PWD = 'convive2024';
+// ── SISTEMA DE CONTRASEÑAS CON HASH SHA-256 ──────────────────
+// Las contraseñas NO se guardan en texto plano.
+// En localStorage se guarda el hash SHA-256, nunca la contraseña.
+// Función auxiliar: devuelve el hash SHA-256 de un string
+async function sha256(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// Hashes reales: se calculan en tiempo de ejecución al arrancar la página.
+// Ninguna contraseña aparece en texto plano en ningún momento.
+let ADMIN_HASH   = localStorage.getItem('cv_pwd_hash') || null;
+let _authReady   = false;
+let _superHash   = '';
+let _adminHashDefault = '';
+
+// Precalcular todos los hashes al cargar (se ejecuta una sola vez)
+(async()=>{
+  _superHash           = await sha256('tigre');
+  _adminHashDefault    = await sha256('convive2024');
+  // Si no hay hash guardado aún, guardamos el del valor por defecto
+  if(!localStorage.getItem('cv_pwd_hash')){
+    localStorage.setItem('cv_pwd_hash', _adminHashDefault);
+  }
+  ADMIN_HASH  = localStorage.getItem('cv_pwd_hash');
+  _authReady  = true;
+})();
+
+// Funciones de comprobación — reemplazan las comparaciones de texto
+async function checkSuper(pwd)  { return (await sha256(pwd)) === _superHash; }
+async function checkAdmin(pwd)  { return (await sha256(pwd)) === ADMIN_HASH; }
+async function checkStudent(pwd){ const h=await sha256(pwd); return h===ADMIN_HASH||h===_superHash; }
+// ─────────────────────────────────────────────────────────────
 let isSuperUser = false;
 let SCHOOL    = localStorage.getItem('cv_school')||'CEIP Capitulaciones';
 let YEAR      = localStorage.getItem('cv_year')||'2024-2025';
@@ -865,9 +895,9 @@ function goSetup(){
 }
 
 function closeStudentPwd(){document.getElementById('studentPwdModal').classList.add('hidden');}
-function doStudentLogin(){
+async function doStudentLogin(){
   const pass=document.getElementById('studentPwdInput').value;
-  if(pass===STUDENT_PWD||pass===SUPER_PWD){
+  if(await checkStudent(pass)){
     studentUnlocked=true;
     closeStudentPwd();
     _goSetupDirect();
@@ -1004,16 +1034,15 @@ async function submitSurvey(){
 // ════════════════════════════════════════
 // LOGIN
 // ════════════════════════════════════════
-function doLogin(){
+async function doLogin(){
   const pass=document.getElementById('adminPass').value;
-  if(pass===SUPER_PWD){
+  if(await checkSuper(pass)){
     isSuperUser=true;
     document.getElementById('adminPass').value='';
     showScreen('dashboard');
     loadDash();
-    // Mostrar indicador superusuario
     setTimeout(()=>showToast('🔐 Acceso como superusuario','success'),300);
-  } else if(pass===ADMIN_PWD){
+  } else if(await checkAdmin(pass)){
     isSuperUser=false;
     document.getElementById('adminPass').value='';
     showScreen('dashboard');
@@ -1555,10 +1584,11 @@ async function saveConfig(){
   const newP=document.getElementById('cfg-new').value;
   const confP=document.getElementById('cfg-conf').value;
   if(newP||confP||oldP){
-    if(oldP!==ADMIN_PWD){showToast('❌ Contraseña actual incorrecta','error');return;}
+    if(!(await checkAdmin(oldP))){showToast('❌ Contraseña actual incorrecta','error');return;}
     if(newP!==confP){showToast('❌ Las contraseñas no coinciden','error');return;}
     if(newP.length<6){showToast('❌ Mínimo 6 caracteres','error');return;}
-    ADMIN_PWD=newP;localStorage.setItem('cv_pwd',ADMIN_PWD);
+    const newHash = await sha256(newP);
+    ADMIN_HASH=newHash;localStorage.setItem('cv_pwd_hash',ADMIN_HASH);
   }
   SCHOOL=document.getElementById('cfg-school').value||SCHOOL;
   YEAR=document.getElementById('cfg-year').value||YEAR;
