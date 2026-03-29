@@ -325,8 +325,6 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
 .login-logo{width:90px;height:auto;object-fit:contain;margin:0 auto 1.25rem;display:block;border-radius:12px;box-shadow:var(--shadow);}
 .login-card h2{font-family:'Poppins',sans-serif;font-size:1.85rem;font-weight:700;color:var(--text);margin-bottom:.4rem;}
 .login-card p{color:var(--text-muted);margin-bottom:1.75rem;font-size:.9rem;font-weight:600;}
-.pwd-hint{font-size:.75rem;color:var(--text-muted);margin-top:.5rem;font-weight:600;display:flex;align-items:center;justify-content:center;gap:.4rem;}
-.pwd-hint::before{content:'🔒';}
 
 /* ════════════════════════════════════════
    DASHBOARD - Panel de administración
@@ -644,8 +642,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
     <p>Introduce la contraseña para ver los resultados</p>
     <div class="field" style="text-align:left;">
       <label>Contraseña</label>
-      <input type="password" id="adminPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
-      <div class="pwd-hint">Contraseña por defecto: convive2024</div>
+      <input type="password" id="adminPass" placeholder="Introduce la contraseña" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="btn-primary" onclick="doLogin()">Acceder al panel →</button>
   </div>
