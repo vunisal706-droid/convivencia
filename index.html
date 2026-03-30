@@ -393,7 +393,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
   display:flex;align-items:center;gap:.5rem;
 }
 .chart-wrap{position:relative;height:220px;}
-.sociogram-wrap{position:relative;width:100%;height:560px;border-radius:12px;overflow:hidden;}
+.sociogram-wrap{position:relative;width:100%;height:clamp(320px,55vw,560px);border-radius:12px;overflow:hidden;}
 #sociogramCanvas{width:100%;height:100%;display:block;}
 
 /* Profiles */
@@ -675,6 +675,10 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
       <button class="btn-sm btn-blue" onclick="showManage()">⚙️ Gestionar</button>
       <button class="btn-sm btn-blue" onclick="showConfig()">🔧 Config</button>
       <button class="btn-sm btn-orange" onclick="window.print()">📄 PDF</button>
+      <button id="roleBadgeBtn" class="btn-sm" onclick="showRoleSwitch()"
+        style="background:rgba(255,255,255,.18);color:white;border:1.5px solid rgba(255,255,255,.3);gap:.35rem;min-width:120px;">
+        👩‍💼 Dirección ▾
+      </button>
       <button class="btn-sm btn-ghost" onclick="showScreen('home')">Salir</button>
     </div>
   </div>
@@ -721,9 +725,19 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
       <button class="modal-tab" onclick="switchTab('firebase',this)">🔥 Firebase</button>
     </div>
     <div id="tab-password">
-      <div class="field"><label>Contraseña actual</label><input type="password" id="cfg-old" placeholder="••••••••"></div>
-      <div class="field"><label>Nueva contraseña</label><input type="password" id="cfg-new" placeholder="Mínimo 6 caracteres"></div>
-      <div class="field"><label>Confirmar</label><input type="password" id="cfg-conf" placeholder="Repite la contraseña"></div>
+      <div style="background:var(--primary-light);border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.8rem;color:var(--primary);font-weight:700;display:flex;align-items:center;gap:.5rem;">
+        🔥 Las contraseñas se guardan cifradas en Firebase, nunca en el código ni en el dispositivo.
+      </div>
+      <p style="font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:.75rem;">Contraseña de Dirección</p>
+      <div class="field"><label>Contraseña actual (dirección o superusuario)</label><input type="password" id="cfg-old" placeholder="••••••••"></div>
+      <div class="field"><label>Nueva contraseña de dirección</label><input type="password" id="cfg-new" placeholder="Mínimo 6 caracteres"></div>
+      <div class="field"><label>Confirmar nueva</label><input type="password" id="cfg-conf" placeholder="Repite la contraseña"></div>
+      <hr style="border:none;border-top:1.5px solid var(--border);margin:1.25rem 0;">
+      <p style="font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:.75rem;">Contraseña de Alumnado</p>
+      <div class="field"><label>Nueva contraseña para alumnos</label><input type="password" id="cfg-student-new" placeholder="Mínimo 4 caracteres (dejar vacío = sin cambio)"></div>
+      <hr style="border:none;border-top:1.5px solid var(--border);margin:1.25rem 0;">
+      <p style="font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:.75rem;">Contraseña de Superusuario</p>
+      <div class="field"><label>Nueva contraseña superusuario</label><input type="password" id="cfg-super-new" placeholder="Mínimo 6 caracteres (dejar vacío = sin cambio)"></div>
     </div>
     <div id="tab-school" style="display:none;">
       <div class="field"><label>Nombre del centro</label><input type="text" id="cfg-school" placeholder="CEIP Ejemplo"></div>
@@ -731,6 +745,9 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
     </div>
     <div id="tab-firebase" style="display:none;">
       <div class="firebase-status" id="fbStatus">Comprobando conexión...</div>
+      <div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;padding:.85rem 1rem;margin-bottom:1rem;font-size:.8rem;color:#92400e;font-weight:700;">
+        ⚠️ <strong>Reglas de Firestore:</strong> asegúrate de que <code>cv_config</code> solo sea legible/escribible con autenticación o desde tu dominio. Ver documentación en console.firebase.google.com → Firestore → Reglas.
+      </div>
       <p style="font-size:.8rem;margin-bottom:1rem;color:var(--text-muted);">El proyecto <strong>convivencia-c7956</strong> ya está configurado. Solo edita esto si cambias de proyecto Firebase.</p>
       <div class="field"><label>API Key</label><input type="text" id="cfg-apiKey"></div>
       <div class="field"><label>Project ID</label><input type="text" id="cfg-projectId"></div>
@@ -763,6 +780,20 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
   </div>
 </div>
 
+<!-- MODAL CAMBIO DE PERFIL -->
+<div id="roleSwitchModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:400px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div>
+        <h3 style="margin-bottom:.2rem;">🔄 Cambiar perfil</h3>
+        <p style="margin:0;font-size:.82rem;">Selecciona el perfil al que quieres cambiar</p>
+      </div>
+      <button onclick="closeRoleSwitch()" style="background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:.4rem .75rem;cursor:pointer;font-size:1rem;color:var(--text-muted);">✕</button>
+    </div>
+    <div id="roleSwitchBody" style="display:flex;flex-direction:column;gap:.75rem;"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -782,7 +813,7 @@ let db = null, fbOk = false;
 
 function initFB() {
   try {
-    if(typeof firebase==='undefined') { console.warn('Firebase SDK no disponible'); return; }
+    if(typeof firebase==='undefined') { console.warn('Firebase SDK no disponible'); loadAuthHashes(); return; }
     if(!firebase.apps.length) firebase.initializeApp(FB_CFG);
     db = firebase.firestore();
     fbOk = true;
@@ -791,6 +822,7 @@ function initFB() {
     console.error('Firebase error:', e.message);
     fbOk = false;
   }
+  loadAuthHashes();
 }
 
 // ════════════════════════════════════════
@@ -804,42 +836,69 @@ function setLogos(){
 }
 
 // ════════════════════════════════════════
-// CONFIG LOCAL
+// SISTEMA DE AUTENTICACIÓN — contraseñas en Firestore
+// Documento: cv_config/auth  { superHash, adminHash, studentHash }
+// Los hashes son SHA-256. NUNCA se guardan contraseñas en texto plano
+// ni en el código fuente ni en localStorage.
+// En modo local (sin Firebase) se usa un fallback mínimo de emergencia.
 // ════════════════════════════════════════
-// ── SISTEMA DE CONTRASEÑAS CON HASH SHA-256 ──────────────────
-// Las contraseñas NO se guardan en texto plano.
-// En localStorage se guarda el hash SHA-256, nunca la contraseña.
-// Función auxiliar: devuelve el hash SHA-256 de un string
 async function sha256(str){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-// Hashes reales: se calculan en tiempo de ejecución al arrancar la página.
-// Ninguna contraseña aparece en texto plano en ningún momento.
-let ADMIN_HASH   = localStorage.getItem('cv_pwd_hash') || null;
-let _authReady   = false;
-let _superHash   = '';
-let _adminHashDefault = '';
+// Hashes cargados desde Firestore al iniciar
+let _hashes = { superHash:'', adminHash:'', studentHash:'' };
+let _authReady = false;
 
-// Precalcular todos los hashes al cargar (se ejecuta una sola vez)
-(async()=>{
-  _superHash           = await sha256('tigre');
-  _adminHashDefault    = await sha256('convive2024');
-  // Si no hay hash guardado aún, guardamos el del valor por defecto
-  if(!localStorage.getItem('cv_pwd_hash')){
-    localStorage.setItem('cv_pwd_hash', _adminHashDefault);
+async function loadAuthHashes(){
+  // Fallback por defecto (usado si Firebase no está disponible)
+  const sh = await sha256('tigre');
+  const ah = await sha256('convive2024');
+  _hashes = { superHash:sh, adminHash:ah, studentHash:ah };
+
+  if(!fbOk){ _authReady=true; return; }
+  try{
+    const doc = await db.collection('cv_config').doc('auth').get();
+    if(doc.exists){
+      const d = doc.data();
+      _hashes.superHash   = d.superHash   || sh;
+      _hashes.adminHash   = d.adminHash   || ah;
+      _hashes.studentHash = d.studentHash || _hashes.adminHash;
+    } else {
+      // Primera vez: crear documento con contraseñas iniciales
+      _hashes = { superHash:sh, adminHash:ah, studentHash:ah };
+      await db.collection('cv_config').doc('auth').set(_hashes);
+      console.log('✅ Documento auth creado en Firestore');
+    }
+  } catch(e){
+    console.warn('No se pudo leer auth de Firestore, usando fallback:', e.message);
   }
-  ADMIN_HASH  = localStorage.getItem('cv_pwd_hash');
-  _authReady  = true;
-})();
+  _authReady = true;
+}
 
-// Funciones de comprobación — reemplazan las comparaciones de texto
-async function checkSuper(pwd)  { return (await sha256(pwd)) === _superHash; }
-async function checkAdmin(pwd)  { return (await sha256(pwd)) === ADMIN_HASH; }
-async function checkStudent(pwd){ const h=await sha256(pwd); return h===ADMIN_HASH||h===_superHash; }
+async function checkSuper(pwd)  { return !!_hashes.superHash   && (await sha256(pwd))===_hashes.superHash; }
+async function checkAdmin(pwd)  { return !!_hashes.adminHash   && (await sha256(pwd))===_hashes.adminHash; }
+async function checkStudent(pwd){
+  const h = await sha256(pwd);
+  return (!!_hashes.studentHash && h===_hashes.studentHash)
+      || (!!_hashes.adminHash   && h===_hashes.adminHash)
+      || (!!_hashes.superHash   && h===_hashes.superHash);
+}
+
+async function saveAuthHashes(newAdminPwd, newSuperPwd, newStudentPwd){
+  // Solo guarda los campos que reciben valor nuevo
+  const update = {};
+  if(newAdminPwd)  { update.adminHash   = await sha256(newAdminPwd);   _hashes.adminHash   = update.adminHash; }
+  if(newSuperPwd)  { update.superHash   = await sha256(newSuperPwd);   _hashes.superHash   = update.superHash; }
+  if(newStudentPwd){ update.studentHash = await sha256(newStudentPwd); _hashes.studentHash = update.studentHash; }
+  if(!Object.keys(update).length) return;
+  if(fbOk){ await db.collection('cv_config').doc('auth').set(update,{merge:true}); }
+}
 // ─────────────────────────────────────────────────────────────
 let isSuperUser = false;
+// 'super' | 'admin' | 'student'  — rol activo en el dashboard
+let currentRole = 'admin';
 let SCHOOL    = localStorage.getItem('cv_school')||'CEIP Capitulaciones';
 let YEAR      = localStorage.getItem('cv_year')||'2024-2025';
 
@@ -1037,17 +1096,192 @@ async function submitSurvey(){
 async function doLogin(){
   const pass=document.getElementById('adminPass').value;
   if(await checkSuper(pass)){
-    isSuperUser=true;
+    isSuperUser=true; currentRole='super';
     document.getElementById('adminPass').value='';
     showScreen('dashboard');
+    updateRoleBadge();
     loadDash();
     setTimeout(()=>showToast('🔐 Acceso como superusuario','success'),300);
   } else if(await checkAdmin(pass)){
-    isSuperUser=false;
+    isSuperUser=false; currentRole='admin';
     document.getElementById('adminPass').value='';
     showScreen('dashboard');
+    updateRoleBadge();
     loadDash();
   } else { showToast('❌ Contraseña incorrecta','error'); }
+}
+
+// ════════════════════════════════════════
+// RESUMEN DEL CENTRO (vista sin clase seleccionada)
+// ════════════════════════════════════════
+async function loadCenterSummary(session, body){
+  body.innerHTML=`<div class="loading"><div class="spinner"></div> Cargando resumen del centro...</div>`;
+  const classes=['1','2','3','4','5','6'];
+  const summary=[];
+
+  try{
+    for(const cls of classes){
+      let responses=[], students=[];
+      if(fbOk){
+        const [rSnap,cDoc]=await Promise.all([
+          db.collection('cv_respuestas').where('clase','==',cls).where('sesion','==',session).get(),
+          db.collection('cv_clases').doc(cls).get()
+        ]);
+        responses=rSnap.docs.map(d=>d.data());
+        students=cDoc.exists?(cDoc.data().alumnos||[]):[];
+      } else {
+        const all=JSON.parse(localStorage.getItem('cv_resp')||'[]');
+        responses=all.filter(r=>r.clase===cls&&r.sesion===session);
+        students=JSON.parse(localStorage.getItem('cv_al_'+cls)||'[]');
+      }
+      if(students.length>0){
+        const a=analyze(responses,students);
+        summary.push({cls,responses:responses.length,students:students.length,a});
+      }
+    }
+
+    if(summary.length===0){
+      body.innerHTML=`<div class="no-data"><div class="icon">🏫</div><h3>Sin datos en el centro</h3><p>No hay clases con alumnos registrados para la sesión de ${sesLbl(session)}. Añade alumnos en ⚙️ Gestionar.</p></div>`;
+      return;
+    }
+
+    const totalAlumnos=summary.reduce((s,c)=>s+c.students,0);
+    const totalResp=summary.reduce((s,c)=>s+c.responses,0);
+    const clasesConDatos=summary.filter(c=>c.responses>0);
+    const avgClima=clasesConDatos.length>0?(clasesConDatos.reduce((s,c)=>s+c.a.clima,0)/clasesConDatos.length):0;
+    const totalRisk=summary.reduce((s,c)=>s+c.a.profiles.filter(p=>p.role==='acosado'||p.role==='acosador').length,0);
+    const totalAislados=summary.reduce((s,c)=>s+c.a.profiles.filter(p=>p.role==='aislado').length,0);
+    const totalLideres=summary.reduce((s,c)=>s+c.a.profiles.filter(p=>p.role==='lider').length,0);
+
+    // Filas de tabla por clase
+    const rowsHtml=summary.map(({cls,responses,students,a})=>{
+      const pct=students>0?Math.round(responses/students*100):0;
+      const climaCol=a.n===0?'var(--text-muted)':a.clima>=4?'var(--accent)':a.clima>=3?'var(--warning)':'var(--danger)';
+      const climaTxt=a.n===0?'—':a.clima.toFixed(1);
+      const risk=a.profiles.filter(p=>p.role==='acosado'||p.role==='acosador').length;
+      return `<tr>
+        <td style="font-weight:800;color:var(--primary)">${cls}º</td>
+        <td>${responses} / ${students} <span style="color:var(--text-muted);font-size:.75rem">(${pct}%)</span></td>
+        <td style="color:${climaCol};font-weight:800">${climaTxt}</td>
+        <td>${a.profiles.filter(p=>p.role==='lider').length}</td>
+        <td>${a.profiles.filter(p=>p.role==='aislado').length}</td>
+        <td style="${risk>0?'color:var(--danger);font-weight:800':''}'">${risk>0?'⚠️ '+risk:'0'}</td>
+      </tr>`;
+    }).join('');
+
+    Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});
+    charts={};
+
+    body.innerHTML=`
+      <div style="margin-bottom:1.25rem;">
+        <div style="font-family:'Poppins',sans-serif;font-size:1.4rem;font-weight:700;color:var(--text);margin-bottom:.25rem;">🏫 Resumen del Centro — ${sesLbl(session)}</div>
+        <div style="font-size:.82rem;color:var(--text-muted);font-weight:600;">${SCHOOL} · Curso ${YEAR}</div>
+      </div>
+      <div class="stats-grid" style="margin-bottom:1.5rem;">
+        <div class="stat-card blue"><div class="stat-label">Alumnos registrados</div><div class="stat-value">${totalAlumnos}</div><div class="stat-sub">${totalResp} han respondido</div></div>
+        <div class="stat-card ${avgClima>=4?'green':avgClima>=3?'amber':'red'}"><div class="stat-label">Clima medio</div><div class="stat-value">${clasesConDatos.length>0?avgClima.toFixed(1):'—'}</div><div class="stat-sub">sobre 5</div></div>
+        <div class="stat-card green"><div class="stat-label">Líderes</div><div class="stat-value">${totalLideres}</div><div class="stat-sub">en todo el centro</div></div>
+        <div class="stat-card orange"><div class="stat-label">Aislados</div><div class="stat-value">${totalAislados}</div><div class="stat-sub">en todo el centro</div></div>
+        <div class="stat-card red"><div class="stat-label">En riesgo</div><div class="stat-value">${totalRisk}</div><div class="stat-sub">requieren atención</div></div>
+      </div>
+      <div class="charts-grid" style="margin-bottom:1.5rem;">
+        <div class="panel"><div class="panel-title">📊 Participación por clase</div><div class="chart-wrap"><canvas id="centerPartChart"></canvas></div></div>
+        <div class="panel"><div class="panel-title">🌡️ Clima por clase</div><div class="chart-wrap"><canvas id="centerClimaChart"></canvas></div></div>
+      </div>
+      <div class="charts-grid" style="margin-bottom:1.5rem;">
+        <div class="panel"><div class="panel-title">⚠️ Situaciones de riesgo por clase</div><div class="chart-wrap"><canvas id="centerRiskChart"></canvas></div></div>
+        <div class="panel"><div class="panel-title">👥 Distribución de roles en el centro</div><div class="chart-wrap"><canvas id="centerRolesChart"></canvas></div></div>
+      </div>
+      <div class="panel" style="margin-bottom:1.5rem;">
+        <div class="panel-title">📋 Detalle por clase</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:.88rem;">
+            <thead>
+              <tr style="background:var(--bg);font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);">
+                <th style="padding:.65rem .85rem;text-align:left;font-weight:800;">Clase</th>
+                <th style="padding:.65rem .85rem;text-align:left;font-weight:800;">Respuestas</th>
+                <th style="padding:.65rem .85rem;text-align:left;font-weight:800;">Clima</th>
+                <th style="padding:.65rem .85rem;text-align:left;font-weight:800;">Líderes</th>
+                <th style="padding:.65rem .85rem;text-align:left;font-weight:800;">Aislados</th>
+                <th style="padding:.65rem .85rem;text-align:left;font-weight:800;">En riesgo</th>
+              </tr>
+            </thead>
+            <tbody style="font-weight:600;">${rowsHtml}</tbody>
+          </table>
+        </div>
+      </div>`;
+
+    setTimeout(()=>{
+      // Participación
+      const cp=document.getElementById('centerPartChart');
+      if(cp) charts.centerPart=new Chart(cp,{
+        type:'bar',
+        data:{
+          labels:summary.map(c=>c.cls+'º'),
+          datasets:[
+            {label:'Han respondido',data:summary.map(c=>c.responses),backgroundColor:'rgba(30,95,204,.75)',borderRadius:6,borderSkipped:false},
+            {label:'Total alumnos',data:summary.map(c=>c.students),backgroundColor:'rgba(30,95,204,.15)',borderRadius:6,borderSkipped:false}
+          ]
+        },
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{family:'Nunito',weight:'600'},padding:12}}},
+          scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'Nunito'},precision:0}},x:{ticks:{font:{family:'Nunito',weight:'700'}}}}}
+      });
+
+      // Clima
+      const cc=document.getElementById('centerClimaChart');
+      if(cc){
+        const climaData=summary.map(c=>c.a.n>0?parseFloat(c.a.clima.toFixed(2)):null);
+        charts.centerClima=new Chart(cc,{
+          type:'bar',
+          data:{
+            labels:summary.map(c=>c.cls+'º'),
+            datasets:[{label:'Clima',data:climaData,
+              backgroundColor:summary.map(c=>c.a.n===0?'rgba(148,163,184,.3)':c.a.clima>=4?'rgba(34,197,94,.75)':c.a.clima>=3?'rgba(245,158,11,.75)':'rgba(239,68,68,.75)'),
+              borderRadius:6,borderSkipped:false}]
+          },
+          options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+            scales:{y:{beginAtZero:true,max:5,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'Nunito'}}},x:{ticks:{font:{family:'Nunito',weight:'700'}}}}}
+        });
+      }
+
+      // Riesgo
+      const cr=document.getElementById('centerRiskChart');
+      if(cr) charts.centerRisk=new Chart(cr,{
+        type:'bar',
+        data:{
+          labels:summary.map(c=>c.cls+'º'),
+          datasets:[
+            {label:'Aislados',data:summary.map(c=>c.a.profiles.filter(p=>p.role==='aislado').length),backgroundColor:'rgba(96,165,250,.75)',borderRadius:4,borderSkipped:false},
+            {label:'En riesgo',data:summary.map(c=>c.a.profiles.filter(p=>p.role==='acosado'||p.role==='acosador').length),backgroundColor:'rgba(239,68,68,.75)',borderRadius:4,borderSkipped:false}
+          ]
+        },
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{family:'Nunito',weight:'600'},padding:12}}},
+          scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'Nunito'},precision:0,stepSize:1}},x:{ticks:{font:{family:'Nunito',weight:'700'}}}}}
+      });
+
+      // Roles totales
+      const rr=document.getElementById('centerRolesChart');
+      if(rr){
+        const allProfiles=summary.flatMap(c=>c.a.profiles);
+        const rc={lider:0,aislado:0,acosado:0,acosador:0,normal:0};
+        allProfiles.forEach(p=>{if(rc[p.role]!==undefined)rc[p.role]++;else rc.normal++;});
+        if(Object.values(rc).some(v=>v>0)){
+          charts.centerRoles=new Chart(rr,{
+            type:'doughnut',
+            data:{labels:['Líderes','Aislados','Posible acosado','Posible acosador','Normal'],
+              datasets:[{data:[rc.lider,rc.aislado,rc.acosado,rc.acosador,rc.normal],
+                backgroundColor:['#22c55e','#60a5fa','#f7800a','#ef4444','#94a3b8'],borderWidth:3,borderColor:'white'}]},
+            options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
+              plugins:{legend:{position:'bottom',labels:{font:{family:'Nunito',weight:'600',size:12},padding:10,usePointStyle:true,pointStyle:'circle'}}}}
+          });
+        }
+      }
+    },50);
+
+  } catch(e){
+    console.error(e);
+    body.innerHTML=`<div class="no-data"><div class="icon">⚠️</div><h3>Error cargando resumen</h3><p>${e.message}</p></div>`;
+  }
 }
 
 // ════════════════════════════════════════
@@ -1059,7 +1293,8 @@ async function loadDash(){
   const body=document.getElementById('dashBody');
 
   if(!cls){
-    body.innerHTML=`<div class="no-data"><div class="icon">📋</div><h3>Selecciona una clase</h3><p>Elige una clase y sesión para ver los resultados</p></div>`;
+    // Mostrar resumen del centro
+    await loadCenterSummary(session, body);
     return;
   }
   body.innerHTML=`<div class="loading"><div class="spinner"></div> Cargando datos...</div>`;
@@ -1079,6 +1314,10 @@ async function loadDash(){
       students=JSON.parse(localStorage.getItem('cv_al_'+cls)||'[]');
     }
 
+    if(students.length===0){
+      body.innerHTML=`<div class="no-data"><div class="icon">👥</div><h3>Sin alumnos registrados</h3><p>La clase ${cls}º no tiene alumnos añadidos todavía. Ve a <strong>⚙️ Gestionar</strong> para añadirlos antes de ver resultados.</p></div>`;
+      return;
+    }
     if(responses.length===0){
       body.innerHTML=`<div class="no-data"><div class="icon">📭</div><h3>Sin respuestas aún</h3><p>Clase ${cls}º — ${sesLbl(session)}. Los datos aparecerán aquí cuando los alumnos completen el cuestionario.</p></div>`;
       return;
@@ -1192,7 +1431,7 @@ function analyze(responses,students){
   const clima=n>0?sumClima/n:3;
   const roleCounts={};
   profiles.forEach(p=>roleCounts[p.role]=(roleCounts[p.role]||0)+1);
-  return{profiles,clima,roleCounts,avgConf:n>0?sumConf/n:0,avgExcl:n>0?sumExcl/n:0,pos,neg,students};
+  return{profiles,clima,roleCounts,avgConf:n>0?sumConf/n:0,avgExcl:n>0?sumExcl/n:0,pos,neg,students,n};
 }
 
 function roleLbl(r){return{lider:'Líder',aislado:'Aislado/a',acosador:'Posible acosador',acosado:'Posible acosado',conflicto:'Conflictivo',normal:'Normal'}[r]||r;}
@@ -1204,16 +1443,23 @@ const roleColors={lider:'#22c55e',aislado:'#3b82f6',acosador:'#ef4444',acosado:'
 // ════════════════════════════════════════
 function drawCharts(a){
   const c1=document.getElementById('climaChart');
-  if(c1) charts.clima=new Chart(c1,{
-    type:'bar',
-    data:{labels:['Bienestar','Cohesión','Exclusión (inv.)','Respeto'],
-      datasets:[{data:[a.clima,5-a.avgConf*0.8,5-a.avgExcl*0.8,a.clima],
-        backgroundColor:['rgba(30,95,204,.75)','rgba(34,197,94,.75)','rgba(247,128,10,.75)','rgba(139,92,246,.75)'],
-        borderRadius:8,borderSkipped:false}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{y:{beginAtZero:true,max:5,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'Nunito'}}},
-              x:{ticks:{font:{family:'Nunito',weight:'600'}}}}}
-  });
+  if(c1){
+    if(a.n===0){
+      // Sin datos reales: mostrar mensaje en el canvas
+      c1.parentElement.innerHTML='<div style="height:220px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:.9rem;font-weight:700;">Sin respuestas aún</div>';
+    } else {
+      charts.clima=new Chart(c1,{
+        type:'bar',
+        data:{labels:['Bienestar','Cohesión','Exclusión (inv.)','Respeto'],
+          datasets:[{data:[a.clima,5-a.avgConf*0.8,5-a.avgExcl*0.8,a.clima],
+            backgroundColor:['rgba(30,95,204,.75)','rgba(34,197,94,.75)','rgba(247,128,10,.75)','rgba(139,92,246,.75)'],
+            borderRadius:8,borderSkipped:false}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+          scales:{y:{beginAtZero:true,max:5,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'Nunito'}}},
+                  x:{ticks:{font:{family:'Nunito',weight:'600'}}}}}
+      });
+    }
+  }
 
   const c2=document.getElementById('rolesChart');
   const rc=a.roleCounts;
@@ -1254,7 +1500,9 @@ function hexAlpha(hex,a){
 function drawSociogram(a,responses){
   const canvas=document.getElementById('sociogramCanvas');
   if(!canvas) return;
-  const W=800, H=560;
+  const wrap=canvas.parentElement;
+  const W=Math.min(800, wrap.offsetWidth||800);
+  const H=Math.round(W*0.65);
   canvas.width=W; canvas.height=H;
   canvas.style.width='100%'; canvas.style.height='auto';
   const ctx=canvas.getContext('2d');
@@ -1580,22 +1828,36 @@ function switchTab(tab,btn){
 
 async function saveConfig(){
   if(!isSuperUser){showToast('🔒 Solo el superusuario puede guardar la configuración','warning');return;}
-  const oldP=document.getElementById('cfg-old').value;
-  const newP=document.getElementById('cfg-new').value;
-  const confP=document.getElementById('cfg-conf').value;
+  const oldP   = document.getElementById('cfg-old').value;
+  const newP   = document.getElementById('cfg-new').value;
+  const confP  = document.getElementById('cfg-conf').value;
+  const newSup = document.getElementById('cfg-super-new').value;
+  const newStu = document.getElementById('cfg-student-new').value;
+
+  // Cambio contraseña de dirección
   if(newP||confP||oldP){
-    if(!(await checkAdmin(oldP))){showToast('❌ Contraseña actual incorrecta','error');return;}
+    if(!(await checkAdmin(oldP)||await checkSuper(oldP))){showToast('❌ Contraseña actual incorrecta','error');return;}
     if(newP!==confP){showToast('❌ Las contraseñas no coinciden','error');return;}
     if(newP.length<6){showToast('❌ Mínimo 6 caracteres','error');return;}
-    const newHash = await sha256(newP);
-    ADMIN_HASH=newHash;localStorage.setItem('cv_pwd_hash',ADMIN_HASH);
+    await saveAuthHashes(newP, null, null);
   }
+  // Cambio contraseña superusuario
+  if(newSup){
+    if(newSup.length<6){showToast('❌ Contraseña superusuario: mínimo 6 caracteres','error');return;}
+    await saveAuthHashes(null, newSup, null);
+  }
+  // Cambio contraseña alumnado
+  if(newStu){
+    if(newStu.length<4){showToast('❌ Contraseña alumnado: mínimo 4 caracteres','error');return;}
+    await saveAuthHashes(null, null, newStu);
+  }
+
   SCHOOL=document.getElementById('cfg-school').value||SCHOOL;
   YEAR=document.getElementById('cfg-year').value||YEAR;
   localStorage.setItem('cv_school',SCHOOL);localStorage.setItem('cv_year',YEAR);
   document.querySelector('.home-school').textContent=SCHOOL;
   closeConfig();
-  showToast('✅ Configuración guardada','success');
+  showToast('✅ Configuración guardada en Firebase','success');
 }
 
 // ════════════════════════════════════════
@@ -1607,6 +1869,92 @@ function showToast(msg,type=''){
   t.className='toast'+(type?' '+type:'');
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ════════════════════════════════════════
+// CAMBIO DE PERFIL SIN SALIR
+// ════════════════════════════════════════
+const ROLE_META={
+  super: {label:'Superusuario', icon:'🔐', color:'#8b5cf6'},
+  admin: {label:'Dirección',    icon:'👩‍💼', color:'var(--primary)'},
+  student:{label:'Alumnado',    icon:'🧒',  color:'var(--accent)'}
+};
+
+function updateRoleBadge(){
+  const m=ROLE_META[currentRole]||ROLE_META.admin;
+  const el=document.getElementById('roleBadgeBtn');
+  if(el) el.innerHTML=`${m.icon} <span style="display:inline-block;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle">${m.label}</span> ▾`;
+}
+
+function showRoleSwitch(){
+  const opts=[];
+  if(currentRole==='super'){
+    opts.push({role:'admin',  ...ROLE_META.admin,   needsPwd:false});
+    opts.push({role:'student',...ROLE_META.student,  needsPwd:false});
+  } else if(currentRole==='admin'){
+    opts.push({role:'student',...ROLE_META.student,  needsPwd:false});
+    opts.push({role:'super',  ...ROLE_META.super,    needsPwd:true, hint:'Contraseña superusuario'});
+  } else {
+    opts.push({role:'admin', ...ROLE_META.admin,  needsPwd:true, hint:'Contraseña dirección'});
+    opts.push({role:'super', ...ROLE_META.super,  needsPwd:true, hint:'Contraseña superusuario'});
+  }
+
+  const btns=opts.map(o=>{
+    if(o.needsPwd){
+      return `<div style="border:1.5px solid var(--border);border-radius:12px;padding:1rem;display:flex;flex-direction:column;gap:.6rem;">
+        <div style="display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:.95rem;">${o.icon} ${o.label}</div>
+        <input type="password" placeholder="${o.hint}" id="rsPwd_${o.role}"
+          style="padding:.65rem .9rem;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:.88rem;outline:none;width:100%;"
+          onkeydown="if(event.key==='Enter')doRoleSwitch('${o.role}')">
+        <button onclick="doRoleSwitch('${o.role}')"
+          style="background:${o.color};color:white;border:none;border-radius:8px;padding:.55rem 1rem;font-family:inherit;font-weight:800;font-size:.82rem;cursor:pointer;width:100%;">
+          Cambiar a ${o.label} →
+        </button>
+      </div>`;
+    } else {
+      return `<button onclick="doRoleSwitch('${o.role}')"
+        style="background:${o.color};color:white;border:none;border-radius:12px;padding:1rem 1.25rem;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer;display:flex;align-items:center;gap:.75rem;width:100%;transition:opacity .2s;"
+        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        <span style="font-size:1.4rem">${o.icon}</span>
+        <div style="text-align:left"><div>${o.label}</div><div style="font-size:.72rem;opacity:.8;font-weight:600">Sin contraseña — ya tienes acceso</div></div>
+      </button>`;
+    }
+  }).join('');
+
+  document.getElementById('roleSwitchBody').innerHTML=btns;
+  document.getElementById('roleSwitchModal').classList.remove('hidden');
+}
+
+function closeRoleSwitch(){document.getElementById('roleSwitchModal').classList.add('hidden');}
+
+async function doRoleSwitch(targetRole){
+  const hierarchy={super:3,admin:2,student:1};
+  if(hierarchy[targetRole]<=hierarchy[currentRole]){
+    _applyRole(targetRole); return;
+  }
+  const inp=document.getElementById('rsPwd_'+targetRole);
+  if(!inp){showToast('Error interno','error');return;}
+  const pwd=inp.value;
+  let ok=false;
+  if(targetRole==='super') ok=await checkSuper(pwd);
+  else if(targetRole==='admin') ok=await checkAdmin(pwd)||await checkSuper(pwd);
+  if(ok){ _applyRole(targetRole); }
+  else { showToast('❌ Contraseña incorrecta','error'); inp.value=''; inp.focus(); }
+}
+
+function _applyRole(role){
+  currentRole=role;
+  isSuperUser=(role==='super');
+  closeRoleSwitch();
+  updateRoleBadge();
+  const m=ROLE_META[role];
+  if(role==='student'){
+    studentUnlocked=true; // ya tiene permiso, no volver a pedir contraseña
+    showToast(`${m.icon} Cambiado a ${m.label}`,'success');
+    setTimeout(()=>{ showScreen('home'); _goSetupDirect(); },400);
+  } else {
+    showToast(`${m.icon} Cambiado a ${m.label}`,'success');
+  }
 }
 
 // ════════════════════════════════════════
