@@ -393,7 +393,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
   display:flex;align-items:center;gap:.5rem;
 }
 .chart-wrap{position:relative;height:220px;}
-.sociogram-wrap{position:relative;width:100%;height:clamp(360px,60vw,600px);border-radius:12px;overflow:hidden;}
+.sociogram-wrap{position:relative;width:100%;height:clamp(380px,70vw,680px);border-radius:12px;overflow:hidden;}
 #sociogramCanvas{width:100%;height:100%;display:block;}
 
 /* Profiles */
@@ -1502,10 +1502,15 @@ function drawSociogram(a,responses){
   if(!canvas) return;
   const wrap=canvas.parentElement;
   const W=Math.min(800, wrap.offsetWidth||800);
-  const PAD=60; // padding para que los nodos del borde no se corten
-  const H=Math.round(W*0.75);
+  const H=Math.round(W*0.85);
   canvas.width=W; canvas.height=H;
   canvas.style.width='100%'; canvas.style.height='auto';
+  // Radios dinámicos: dejan 50px de margen para nodos+texto
+  const PAD=50;
+  const maxR=Math.min(W/2, H/2)-PAD;
+  const R1=Math.round(maxR*0.33);
+  const R2=Math.round(maxR*0.66);
+  const R3=Math.round(maxR);
   const ctx=canvas.getContext('2d');
 
   const students=a.students;
@@ -1524,7 +1529,7 @@ function drawSociogram(a,responses){
 
   // Círculos concéntricos de referencia (muy suaves)
   const cx=W/2, cy=H/2;
-  [110,220,300].forEach(r=>{
+  [R1,R2,R3].forEach(r=>{
     ctx.beginPath(); ctx.arc(cx,cy,r,0,2*Math.PI);
     ctx.strokeStyle='rgba(30,95,204,.06)'; ctx.lineWidth=1.5;
     ctx.setLineDash([4,6]); ctx.stroke(); ctx.setLineDash([]);
@@ -1543,14 +1548,14 @@ function drawSociogram(a,responses){
   const pPos={};
 
   if(leaders.length===1){ pPos[leaders[0]]={x:cx,y:cy}; }
-  else { leaders.forEach((s,i)=>{ const ang=2*Math.PI*i/Math.max(leaders.length,1)-Math.PI/2; pPos[s]={x:cx+110*Math.cos(ang),y:cy+110*Math.sin(ang)}; }); }
+  else { leaders.forEach((s,i)=>{ const ang=2*Math.PI*i/Math.max(leaders.length,1)-Math.PI/2; pPos[s]={x:cx+R1*Math.cos(ang),y:cy+R1*Math.sin(ang)}; }); }
 
   const midGroup=[...normal,...risk];
-  midGroup.forEach((s,i)=>{ const ang=2*Math.PI*i/Math.max(midGroup.length,1)-Math.PI/2; pPos[s]={x:cx+220*Math.cos(ang),y:cy+220*Math.sin(ang)}; });
+  midGroup.forEach((s,i)=>{ const ang=2*Math.PI*i/Math.max(midGroup.length,1)-Math.PI/2; pPos[s]={x:cx+R2*Math.cos(ang),y:cy+R2*Math.sin(ang)}; });
 
-  isolated.forEach((s,i)=>{ const ang=2*Math.PI*i/Math.max(isolated.length,1)+Math.PI/4; pPos[s]={x:cx+300*Math.cos(ang),y:cy+300*Math.sin(ang)}; });
+  isolated.forEach((s,i)=>{ const ang=2*Math.PI*i/Math.max(isolated.length,1)+Math.PI/4; pPos[s]={x:cx+R3*Math.cos(ang),y:cy+R3*Math.sin(ang)}; });
 
-  students.forEach(s=>{ if(!pPos[s]){ const i=Object.keys(pPos).length; const ang=2*Math.PI*i/students.length-Math.PI/2; pPos[s]={x:cx+220*Math.cos(ang),y:cy+220*Math.sin(ang)}; } });
+  students.forEach(s=>{ if(!pPos[s]){ const i=Object.keys(pPos).length; const ang=2*Math.PI*i/students.length-Math.PI/2; pPos[s]={x:cx+R2*Math.cos(ang),y:cy+R2*Math.sin(ang)}; } });
 
   // ── RADIO DE NODO ──
   function nodeR(name){ return 22+Math.min((a.pos[name]||0)*3,18); }
@@ -1591,9 +1596,9 @@ function drawSociogram(a,responses){
   // Zona influencia líderes
   leaders.forEach(s=>{
     const p=pPos[s]; if(!p) return;
-    const gr=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,85);
+    const gr=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,R1*0.77);
     gr.addColorStop(0,'rgba(34,197,94,.12)'); gr.addColorStop(1,'rgba(34,197,94,0)');
-    ctx.beginPath(); ctx.arc(p.x,p.y,85,0,2*Math.PI); ctx.fillStyle=gr; ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x,p.y,R1*0.77,0,2*Math.PI); ctx.fillStyle=gr; ctx.fill();
   });
 
   // Aristas negativas
