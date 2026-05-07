@@ -407,23 +407,53 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
 .profile-card.aislado{border-color:#60a5fa;background:#eff6ff;}
 .profile-card.acosador{border-color:var(--danger);background:var(--danger-light);}
 .profile-card.acosado{border-color:var(--secondary);background:var(--secondary-light);}
-.profile-card.enriesgo{border-color:var(--warning);background:var(--warning-light);}
+.profile-card.enriesgo{border-color:#ec4899;background:#fdf2f8;}
 .profile-card.conflicto{border-color:var(--purple);background:var(--purple-light);}
 .profile-card.normal{border-color:var(--border);}
 .profile-badge{position:absolute;top:.65rem;right:.65rem;font-size:1.1rem;}
-.profile-name{font-weight:800;font-size:.9rem;margin-bottom:.2rem;color:var(--text);}
-.profile-role{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem;}
+.profile-name{font-weight:800;font-size:.9rem;margin-bottom:.1rem;color:var(--text);padding-right:1.4rem;}
+.profile-role{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem;}
 .profile-card.lider .profile-role{color:var(--accent);}
 .profile-card.aislado .profile-role{color:#3b82f6;}
 .profile-card.acosador .profile-role{color:var(--danger);}
 .profile-card.acosado .profile-role{color:var(--secondary);}
-.profile-card.enriesgo .profile-role{color:var(--warning);}
+.profile-card.enriesgo .profile-role{color:#ec4899;}
 .profile-card.conflicto .profile-role{color:var(--purple);}
 .profile-card.normal .profile-role{color:var(--text-muted);}
 .score-tag{
   font-size:.68rem;padding:.2rem .5rem;border-radius:6px;font-weight:700;
   background:rgba(0,0,0,.05);color:var(--text);display:inline-block;margin:.15rem .1rem;
 }
+/* Richer profile cards */
+.profile-metric{display:flex;align-items:center;gap:.45rem;font-size:.72rem;font-weight:600;color:var(--text-secondary);margin:.1rem 0;}
+.profile-metric>span:first-child{width:80px;flex-shrink:0;font-size:.68rem;}
+.metric-bar{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.metric-fill{height:100%;border-radius:3px;transition:width .4s;}
+.profile-metric>span:last-child{font-size:.68rem;font-weight:800;width:24px;text-align:right;}
+.profile-noms{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .2rem;}
+.nom-pos{background:var(--accent-light);color:#14532d;border-radius:6px;padding:.18rem .45rem;font-size:.68rem;font-weight:700;}
+.nom-neg{background:var(--danger-light);color:#7f1d1d;border-radius:6px;padding:.18rem .45rem;font-size:.68rem;font-weight:700;}
+.profile-nomina{font-size:.69rem;color:var(--text-secondary);font-weight:600;margin:.1rem 0;line-height:1.4;}
+.profile-nomina span{color:var(--primary);font-weight:800;}
+.profile-nomina.neg span{color:var(--danger);}
+.profile-teacher-badge{background:var(--primary-light);color:var(--primary);border-radius:6px;padding:.18rem .45rem;font-size:.68rem;font-weight:800;display:inline-block;margin-top:.2rem;}
+.profile-teacher-badge.obs{background:#fef3c7;color:#92400e;}
+.profile-no-resp{font-size:.65rem;color:var(--text-muted);font-weight:600;font-style:italic;}
+/* Teacher panel */
+.teacher-row{display:flex;align-items:center;gap:.75rem;padding:.6rem .25rem;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.teacher-row:last-child{border-bottom:none;}
+.teacher-row-left{display:flex;align-items:center;gap:.45rem;min-width:180px;flex:1;}
+.teacher-role-dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0;}
+.teacher-row-name{font-weight:700;font-size:.85rem;}
+.teacher-role-lbl{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;}
+.teacher-qs{display:flex;gap:.3rem;flex-wrap:wrap;}
+.tq-btn{border:2px solid var(--border);border-radius:8px;padding:.28rem .5rem;font-size:.7rem;font-weight:700;cursor:pointer;background:white;color:var(--text-muted);transition:all .18s;white-space:nowrap;}
+.tq-btn:hover{border-color:#f59e0b;color:#92400e;background:#fef3c7;}
+.tq-btn.active{border-color:var(--danger);background:var(--danger-light);color:var(--danger);}
+.teacher-exceptional-label{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--danger);padding:.4rem 0 .6rem;display:flex;align-items:center;gap:.4rem;}
+.teacher-normal-label{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);padding:.4rem 0 .6rem;display:flex;align-items:center;gap:.4rem;}
+details summary{cursor:pointer;list-style:none;}
+details summary::-webkit-details-marker{display:none;}
 
 /* AI Panel */
 .ai-panel{
@@ -1275,7 +1305,7 @@ async function loadCenterSummary(session, body){
             type:'doughnut',
             data:{labels:['Líderes','Aislados','Posible acosado','Posible acosador','Situación de riesgo','Conflictivo','Normal'],
               datasets:[{data:[rc.lider,rc.aislado,rc.acosado,rc.acosador,rc.enriesgo,rc.conflicto,rc.normal],
-                backgroundColor:['#22c55e','#60a5fa','#f7800a','#ef4444','#f59e0b','#8b5cf6','#94a3b8'],borderWidth:3,borderColor:'white'}]},
+                backgroundColor:['#22c55e','#60a5fa','#f7800a','#ef4444','#ec4899','#8b5cf6','#94a3b8'],borderWidth:3,borderColor:'white'}]},
             options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
               plugins:{legend:{position:'bottom',labels:{font:{family:'Nunito',weight:'600',size:12},padding:10,usePointStyle:true,pointStyle:'circle'}}}}
           });
@@ -1298,25 +1328,27 @@ async function loadDash(){
   const body=document.getElementById('dashBody');
 
   if(!cls){
-    // Mostrar resumen del centro
     await loadCenterSummary(session, body);
     return;
   }
   body.innerHTML=`<div class="loading"><div class="spinner"></div> Cargando datos...</div>`;
 
   try {
-    let responses=[], students=[];
+    let responses=[], students=[], teacherData={};
     if(fbOk){
-      const [rSnap,cDoc]=await Promise.all([
+      const [rSnap,cDoc,tdDoc]=await Promise.all([
         db.collection('cv_respuestas').where('clase','==',cls).where('sesion','==',session).get(),
-        db.collection('cv_clases').doc(cls).get()
+        db.collection('cv_clases').doc(cls).get(),
+        db.collection('cv_docente').doc(cls+'_'+session).get()
       ]);
       responses=rSnap.docs.map(d=>d.data());
       students=cDoc.exists?(cDoc.data().alumnos||[]):[];
+      teacherData=tdDoc.exists?(tdDoc.data()||{}):{};
     } else {
       const all=JSON.parse(localStorage.getItem('cv_resp')||'[]');
       responses=all.filter(r=>r.clase===cls&&r.sesion===session);
       students=JSON.parse(localStorage.getItem('cv_al_'+cls)||'[]');
+      teacherData=JSON.parse(localStorage.getItem('cv_td_'+cls+'_'+session)||'{}');
     }
 
     if(students.length===0){
@@ -1327,7 +1359,7 @@ async function loadDash(){
       body.innerHTML=`<div class="no-data"><div class="icon">📭</div><h3>Sin respuestas aún</h3><p>Clase ${cls}º — ${sesLbl(session)}. Los datos aparecerán aquí cuando los alumnos completen el cuestionario.</p></div>`;
       return;
     }
-    renderDash(responses,students,cls,session,body);
+    renderDash(responses,students,cls,session,body,teacherData);
   } catch(e){
     console.error(e);
     body.innerHTML=`<div class="no-data"><div class="icon">⚠️</div><h3>Error cargando datos</h3><p>${e.message}</p></div>`;
@@ -1336,8 +1368,8 @@ async function loadDash(){
 
 function sesLbl(s){return s==='nov'?'Noviembre':s==='abril'?'Abril':s;}
 
-function renderDash(responses,students,cls,session,body){
-  const a=analyze(responses,students);
+function renderDash(responses,students,cls,session,body,teacherData={}){
+  const a=analyze(responses,students,teacherData);
   Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});
   charts={};
 
@@ -1387,7 +1419,7 @@ function renderDash(responses,students,cls,session,body){
         <span style="display:flex;align-items:center;gap:.35rem;"><span style="width:12px;height:12px;border-radius:50%;background:#3b82f6;display:inline-block;"></span>Aislado/a</span>
         <span style="display:flex;align-items:center;gap:.35rem;"><span style="width:12px;height:12px;border-radius:50%;background:#ef4444;display:inline-block;"></span>Posible acosador</span>
         <span style="display:flex;align-items:center;gap:.35rem;"><span style="width:12px;height:12px;border-radius:50%;background:#f7800a;display:inline-block;"></span>Posible acosado</span>
-        <span style="display:flex;align-items:center;gap:.35rem;"><span style="width:12px;height:12px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>Situación de riesgo</span>
+        <span style="display:flex;align-items:center;gap:.35rem;"><span style="width:12px;height:12px;border-radius:50%;background:#ec4899;display:inline-block;"></span>Sit. de riesgo</span>
         <span style="display:flex;align-items:center;gap:.35rem;"><span style="width:12px;height:12px;border-radius:50%;background:#8b5cf6;display:inline-block;"></span>Conflictivo</span>
         <span style="display:flex;align-items:center;gap:.35rem;"><span style="width:12px;height:12px;border-radius:50%;background:#94a3b8;display:inline-block;"></span>Normal</span>
         <span style="display:flex;align-items:center;gap:.4rem;"><svg width="28" height="10" viewBox="0 0 28 10"><line x1="0" y1="5" x2="22" y2="5" stroke="#22c55e" stroke-width="2"/><polygon points="22,1 28,5 22,9" fill="#22c55e"/></svg>Positiva</span>
@@ -1398,31 +1430,36 @@ function renderDash(responses,students,cls,session,body){
     <div class="panel" style="margin-bottom:1.5rem;">
       <div class="panel-title">🧑‍🤝‍🧑 Perfiles individuales</div>
       <div class="profiles-grid" id="profilesGrid"></div>
-    </div>`;
+    </div>
+    <div class="panel" style="margin-bottom:1.5rem;" id="teacherPanel"></div>`;
 
   setTimeout(()=>{
     drawCharts(a);
     _socioData={cls,session};
     drawSociogram(a,responses);
     drawProfiles(a);
+    renderTeacherPanel(students,a,teacherData,cls,session);
   },50);
 }
 
 // ════════════════════════════════════════
 // ANÁLISIS
 // ════════════════════════════════════════
-function analyze(responses,students){
+function analyze(responses,students,teacherData={}){
   const pos={}, neg={}, intim={};
-  students.forEach(s=>{pos[s]=0;neg[s]=0;intim[s]=0;});
+  const posByNames={}, negByNames={};
+  students.forEach(s=>{pos[s]=0;neg[s]=0;intim[s]=0;posByNames[s]=new Set();negByNames[s]=[];});
 
   let sumClima=0, sumConf=0, sumExcl=0, n=responses.length;
-  // Detectar si alguna respuesta incluye la pregunta "intimida" (clases nuevas)
   const hasIntimiData = responses.some(r=>(r.respuestas?.intimida||[]).length>0);
   responses.forEach(r=>{
     const rp=r.respuestas||{};
-    ['amigos','trabajo','ayuda','lider'].forEach(q=>(rp[q]||[]).forEach(p=>{if(pos[p]!==undefined)pos[p]++;}));
-    ['molestias'].forEach(q=>(rp[q]||[]).forEach(p=>{if(neg[p]!==undefined)neg[p]++;}));
-    // Pregunta nueva (puede no existir en clases ya encuestadas)
+    ['amigos','trabajo','ayuda','lider'].forEach(q=>(rp[q]||[]).forEach(p=>{
+      if(pos[p]!==undefined){pos[p]++;posByNames[p].add(r.alumno);}
+    }));
+    ['molestias'].forEach(q=>(rp[q]||[]).forEach(p=>{
+      if(neg[p]!==undefined){neg[p]++;negByNames[p].push(r.alumno);}
+    }));
     (rp['intimida']||[]).forEach(p=>{if(intim[p]!==undefined)intim[p]++;});
     sumClima+=(rp.bienestar||3);
     sumConf+=(rp.conflictos||3);
@@ -1435,17 +1472,6 @@ function analyze(responses,students){
     let role='normal';
     if(p>=maxPos*0.6&&ng<2) role='lider';
     else if(p<=1&&n>=4) role='aislado';
-    // ── Sistema de clasificación con doble fuente de datos ────────────────────
-    // Si hay datos de "intimida" (clases nuevas): clasificación precisa
-    //   · it≥2                         → acosador confirmado por iguales
-    //   · ng≥3, margen≤-2, it<2        → acosado (rechazado + señalado, NO visto como agresor)
-    //   · ng≥3, margen≥2, it≥1         → acosador (popular + molesta + alguien lo confirma)
-    //   · ng≥3, resto                  → conflicto (base insuficiente)
-    // Si NO hay datos de "intimida" (clases ya encuestadas): clasificación cautelosa
-    //   · ng≥3, margen≥2               → acosador (popular que molesta, patrón claro)
-    //   · ng≥3, margen≤-2              → enriesgo (rechazado+señalado, sin confirmar rol)
-    //   · ng≥3, |margen|≤1             → conflicto
-    // Siempre: ng=2 → conflicto
     const it = intim[s]||0;
     const margen = p - ng;
     if(ng>=3){
@@ -1462,14 +1488,45 @@ function analyze(responses,students){
     } else if(ng===2){
       role='conflicto';
     }
+
     const myR=responses.find(r=>r.alumno===s);
+    const rp=myR?myR.respuestas||{}:{};
     const tags=[];
-    if(myR){const rp=myR.respuestas||{};
-      if(rp.bienestar) tags.push({l:'Bienestar',v:rp.bienestar});
-      if(rp.seguridad) tags.push({l:'Seguridad',v:rp.seguridad});
-      if(rp.respeto)   tags.push({l:'Respeto',v:rp.respeto});
+    if(rp.bienestar) tags.push({l:'Bienestar',v:rp.bienestar});
+    if(rp.seguridad) tags.push({l:'Seguridad',v:rp.seguridad});
+    if(rp.respeto)   tags.push({l:'Respeto',v:rp.respeto});
+
+    // ── Integración observaciones docente ──
+    const td = teacherData[s] || {};
+    const t_agg = !!(td.q1 || td.q2);  // señales de agresor
+    const t_vic = !!(td.q3 || td.q5);  // señales de víctima
+    const t_iso = !!td.q4;             // señal de aislamiento
+    let teacherInfluenced = false;
+    const hasTeacherData = Object.values(td).some(v=>v);
+
+    if(hasTeacherData){
+      if(t_agg && !t_vic){
+        if(['enriesgo','conflicto','normal'].includes(role)){role='acosador';teacherInfluenced=true;}
+      } else if(t_vic && !t_agg){
+        if(['enriesgo','conflicto'].includes(role)){role='acosado';teacherInfluenced=true;}
+        if(role==='normal'&&ng>=1){role='acosado';teacherInfluenced=true;}
+      } else if(t_agg && t_vic){
+        if(['enriesgo','normal'].includes(role)){role='conflicto';teacherInfluenced=true;}
+      }
+      if(t_iso && role==='normal' && p<=2){role='aislado';teacherInfluenced=true;}
     }
-    return{name:s,role,pos:p,neg:ng,tags};
+
+    return{
+      name:s, role, pos:p, neg:ng, tags,
+      excluido: rp.excluido||null,
+      conflictos_q: rp.conflictos||null,
+      hasResponded: !!myR,
+      nominaPos:[...new Set([...(rp.amigos||[]),...(rp.trabajo||[]),...(rp.ayuda||[]),...(rp.lider||[])])].slice(0,4),
+      nominadoPorNames:[...posByNames[s]].slice(0,5),
+      negByNames: negByNames[s]||[],
+      teacherInfluenced,
+      teacherData: td
+    };
   });
 
   const clima=n>0?sumClima/n:3;
@@ -1479,8 +1536,8 @@ function analyze(responses,students){
 }
 
 function roleLbl(r){return{lider:'Líder',aislado:'Aislado/a',acosador:'Posible acosador',acosado:'Posible acosado',enriesgo:'Situación de riesgo',conflicto:'Conflictivo',normal:'Normal'}[r]||r;}
-function roleBadge(r){return{lider:'🌟',aislado:'💙',acosador:'⚠️',acosado:'🆘',enriesgo:'🔴',normal:'',conflicto:'🔶'}[r]||'';}
-const roleColors={lider:'#22c55e',aislado:'#3b82f6',acosador:'#ef4444',acosado:'#f7800a',enriesgo:'#f59e0b',normal:'#94a3b8',conflicto:'#8b5cf6'};
+function roleBadge(r){return{lider:'🌟',aislado:'💙',acosador:'⚠️',acosado:'🆘',enriesgo:'🚨',normal:'',conflicto:'🔶'}[r]||'';}
+const roleColors={lider:'#22c55e',aislado:'#3b82f6',acosador:'#ef4444',acosado:'#f7800a',enriesgo:'#ec4899',normal:'#94a3b8',conflicto:'#8b5cf6'};
 
 // ════════════════════════════════════════
 // GRÁFICAS
@@ -1511,7 +1568,7 @@ function drawCharts(a){
   if(c2&&rData.some(v=>v>0)) charts.roles=new Chart(c2,{
     type:'doughnut',
     data:{labels:['Líderes','Aislados','Posible acosado','Posible acosador','Situación de riesgo','Conflictivo','Normal'],
-      datasets:[{data:rData,backgroundColor:['#22c55e','#60a5fa','#f7800a','#ef4444','#f59e0b','#8b5cf6','#94a3b8'],borderWidth:3,borderColor:'white'}]},
+      datasets:[{data:rData,backgroundColor:['#22c55e','#60a5fa','#f7800a','#ef4444','#ec4899','#8b5cf6','#94a3b8'],borderWidth:3,borderColor:'white'}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
       plugins:{legend:{position:'bottom',labels:{font:{family:'Nunito',weight:'600',size:12},padding:12,usePointStyle:true,pointStyle:'circle'}}}}
   });
@@ -1588,6 +1645,21 @@ function drawSociogram(a,responses){
   const isolated=a.profiles.filter(p=>p.role==='aislado').map(p=>p.name);
   const risk=a.profiles.filter(p=>p.role==='acosado'||p.role==='acosador').map(p=>p.name);
   const normal=students.filter(s=>!leaders.includes(s)&&!isolated.includes(s)&&!risk.includes(s));
+
+  // ── Etiquetas con apellido inicial si hay nombre duplicado ──
+  function normStr(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+  const displayLabel={};
+  students.forEach(s=>{
+    const fn=s.split(' ')[0];
+    const normFn=normStr(fn);
+    const hasDup=students.some(o=>o!==s&&normStr(o.split(' ')[0])===normFn);
+    if(hasDup){
+      const parts=s.split(' ');
+      displayLabel[s]=fn+(parts[1]?' '+parts[1][0]+'.':'');
+    } else {
+      displayLabel[s]=fn;
+    }
+  });
 
   const pPos={};
 
@@ -1677,15 +1749,15 @@ function drawSociogram(a,responses){
     ctx.fillStyle='#ffffff'; ctx.fill();
 
     // Nombre (color del rol)
-    const nombre=s.split(' ')[0];
+    const nombre=displayLabel[s]||s.split(' ')[0];
     const fontSize=Math.max(9,Math.min(13,rad*0.6));
     ctx.fillStyle=col;
     ctx.font=`800 ${fontSize}px Nunito,sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(nombre.length>8?nombre.substring(0,7)+'…':nombre,p.x,p.y);
 
-    // Apellido pequeño si cabe
-    if(s.split(' ').length>1 && rad>28){
+    // Apellido pequeño: se muestra si el label ya no lleva inicial
+    if(s.split(' ').length>1 && rad>28 && displayLabel[s]===s.split(' ')[0]){
       const ap=s.split(' ').slice(1).join(' ');
       ctx.font=`600 ${Math.max(7,fontSize-3)}px Nunito,sans-serif`;
       ctx.fillStyle=hexAlpha(col,.7);
@@ -1723,7 +1795,8 @@ function drawSociogram(a,responses){
   // ── LEYENDA INFERIOR ──
   const legendItems=[
     {col:'#22c55e',label:'Líder'},{col:'#3b82f6',label:'Aislado/a'},
-    {col:'#ef4444',label:'Posible acosador'},{col:'#f7800a',label:'Posible acosado'},{col:'#94a3b8',label:'Normal'}
+    {col:'#ef4444',label:'Acosador'},{col:'#f7800a',label:'Acosado'},
+    {col:'#ec4899',label:'Sit.riesgo'},{col:'#8b5cf6',label:'Conflictivo'},{col:'#94a3b8',label:'Normal'}
   ];
   let lx=16;
   ctx.font='bold 10px Nunito,sans-serif';
@@ -1741,15 +1814,179 @@ function drawSociogram(a,responses){
 function drawProfiles(a){
   const grid=document.getElementById('profilesGrid');
   if(!grid) return;
-  grid.innerHTML=a.profiles.map(p=>`
-    <div class="profile-card ${p.role}">
+
+  // Ordenar: casos graves primero
+  const order={acosador:0,acosado:1,enriesgo:2,conflicto:3,aislado:4,lider:5,normal:6};
+  const sorted=[...a.profiles].sort((x,y)=>(order[x.role]||6)-(order[y.role]||6));
+
+  function scoreColor(v,inverted=false){
+    const hi=inverted?'var(--danger)':'var(--accent)';
+    const lo=inverted?'var(--accent)':'var(--danger)';
+    return v>=4?hi:v>=3?'#f59e0b':lo;
+  }
+
+  grid.innerHTML=sorted.map(p=>{
+    const col=roleColors[p.role]||'#94a3b8';
+
+    // Barras de autoinforme
+    const metricHtml=p.tags.map(t=>`
+      <div class="profile-metric">
+        <span>${t.l}</span>
+        <div class="metric-bar"><div class="metric-fill" style="width:${t.v/5*100}%;background:${scoreColor(t.v)}"></div></div>
+        <span>${t.v}/5</span>
+      </div>`).join('');
+
+    const exclHtml=p.excluido?`
+      <div class="profile-metric">
+        <span>Exclusión</span>
+        <div class="metric-bar"><div class="metric-fill" style="width:${p.excluido/5*100}%;background:${scoreColor(p.excluido,true)}"></div></div>
+        <span>${p.excluido}/5</span>
+      </div>`:'';
+
+    const conflHtml=p.conflictos_q?`
+      <div class="profile-metric">
+        <span>Conflictos</span>
+        <div class="metric-bar"><div class="metric-fill" style="width:${p.conflictos_q/5*100}%;background:${scoreColor(p.conflictos_q,true)}"></div></div>
+        <span>${p.conflictos_q}/5</span>
+      </div>`:'';
+
+    // Nominaciones
+    const nomsHtml=`<div class="profile-noms">
+      <span class="nom-pos">👍 ${p.pos} positivas</span>
+      ${p.neg>0?`<span class="nom-neg">⚠️ ${p.neg} negativas</span>`:''}
+    </div>`;
+
+    // A quién nomina
+    const nominaHtml=p.nominaPos.length>0?
+      `<div class="profile-nomina">Nomina a: <span>${p.nominaPos.map(n=>n.split(' ')[0]).join(', ')}</span></div>`:'';
+
+    // Quién le señala negativamente
+    const negByHtml=p.negByNames.length>0?
+      `<div class="profile-nomina neg">Señalado por: <span>${p.negByNames.map(n=>n.split(' ')[0]).join(', ')}</span></div>`:'';
+
+    // Le apoyan (quién le nomina positivamente)
+    const apoyanHtml=p.nominadoPorNames.length>0?
+      `<div class="profile-nomina">Le apoyan: <span>${p.nominadoPorNames.map(n=>n.split(' ')[0]).join(', ')}</span></div>`:'';
+
+    // Indicador docente
+    const tdVals=Object.values(p.teacherData||{});
+    const tdActive=tdVals.filter(v=>v).length;
+    const teacherHtml=p.teacherInfluenced?
+      `<div class="profile-teacher-badge">👩‍🏫 Confirmado por tutora</div>`:
+      (tdActive>0?`<div class="profile-teacher-badge obs">👩‍🏫 ${tdActive} obs. docente</div>`:'');
+
+    const noRespHtml=!p.hasResponded?
+      `<span class="profile-no-resp">📭 Sin respuesta propia</span>`:'';
+
+    return `<div class="profile-card ${p.role}">
       <div class="profile-badge">${roleBadge(p.role)}</div>
       <div class="profile-name">${p.name}</div>
       <div class="profile-role">${roleLbl(p.role)}</div>
-      ${p.tags.map(t=>`<span class="score-tag">${t.l}: ${t.v}/5</span>`).join('')}
-      <span class="score-tag">+${p.pos} nom.</span>
-      ${p.neg>0?`<span class="score-tag" style="background:rgba(239,68,68,.1);color:#dc2626;">⚠️ ${p.neg}</span>`:''}
-    </div>`).join('');
+      ${noRespHtml}
+      ${metricHtml}${exclHtml}${conflHtml}
+      ${nomsHtml}
+      ${nominaHtml}${apoyanHtml}${negByHtml}
+      ${teacherHtml}
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════
+// CUESTIONARIO DOCENTE
+// ════════════════════════════════════════
+const TEACHER_QS=[
+  {id:'q1',icon:'📋',short:'Partes',full:'¿Ha tenido partes de convivencia por agresión, insultos o exclusión a compañeros/as este trimestre?'},
+  {id:'q2',icon:'👊',short:'Agrede',full:'¿Observas que molesta, ridiculiza o excluye activamente a algún compañero/a?'},
+  {id:'q3',icon:'😢',short:'Malestar',full:'¿Muestra señales de malestar (tristeza, ansiedad, evita el recreo o grupos)?'},
+  {id:'q4',icon:'🤝',short:'Aislado',full:'¿Suele quedarse sin grupo/pareja en actividades o raramente interactúa?'},
+  {id:'q5',icon:'📞',short:'Familia',full:'¿Familia o el propio alumno/a ha comunicado problemas de convivencia?'}
+];
+
+function renderTeacherPanel(students,a,teacherData,cls,session){
+  const panel=document.getElementById('teacherPanel');
+  if(!panel) return;
+  window._teacherEdit=JSON.parse(JSON.stringify(teacherData));
+
+  const exceptional=a.profiles.filter(p=>p.role!=='normal');
+  const normals=a.profiles.filter(p=>p.role==='normal');
+
+  function studentRow(profile){
+    const col=roleColors[profile.role]||'#94a3b8';
+    const td=window._teacherEdit[profile.name]||{};
+    const qBtns=TEACHER_QS.map(q=>{
+      const active=!!td[q.id];
+      return `<button class="tq-btn${active?' active':''}" title="${q.full}"
+        onclick="toggleTQ('${profile.name.replace(/'/g,"\\'")}','${q.id}',this)">
+        ${q.icon} ${q.short}
+      </button>`;
+    }).join('');
+    return `<div class="teacher-row">
+      <div class="teacher-row-left">
+        <span class="teacher-role-dot" style="background:${col}"></span>
+        <span class="teacher-row-name">${profile.name}</span>
+        <span class="teacher-role-lbl" style="color:${col}">${roleLbl(profile.role)}</span>
+      </div>
+      <div class="teacher-qs">${qBtns}</div>
+    </div>`;
+  }
+
+  panel.innerHTML=`
+    <div class="panel-title">📝 Observación docente
+      <span style="font-size:.72rem;font-weight:600;color:var(--text-muted);margin-left:.5rem;">Anónimo · Solo visible para dirección</span>
+    </div>
+    <div style="font-size:.81rem;color:var(--text-muted);font-weight:600;margin-bottom:1rem;background:var(--primary-light);padding:.7rem 1rem;border-radius:10px;display:flex;align-items:center;gap:.5rem;">
+      💡 Estas respuestas refinan la clasificación del sociograma. Activa solo lo que observes; <strong>los cambios se aplican al guardar.</strong>
+    </div>
+
+    <div style="margin-bottom:1.25rem;">
+      <div class="teacher-exceptional-label">⚠️ Casos excepcionales — rellenar preferentemente (${exceptional.length})</div>
+      ${exceptional.length>0?exceptional.map(studentRow).join(''):'<div style="color:var(--text-muted);font-size:.85rem;padding:.4rem;">No hay casos excepcionales detectados aún.</div>'}
+    </div>
+
+    <details>
+      <summary style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);cursor:pointer;padding:.55rem .85rem;background:var(--bg);border-radius:8px;display:flex;align-items:center;gap:.5rem;">
+        👥 Resto del alumnado (${normals.length}) — Opcional, ampliar para rellenar
+      </summary>
+      <div style="margin-top:.75rem;">${normals.map(studentRow).join('')}</div>
+    </details>
+
+    <div style="margin-top:1.25rem;display:flex;gap:.85rem;align-items:center;flex-wrap:wrap;">
+      <button onclick="saveTeacherData('${cls}','${session}')"
+        style="background:var(--primary);color:white;border:none;border-radius:10px;padding:.72rem 1.6rem;font-family:inherit;font-weight:800;font-size:.9rem;cursor:pointer;transition:all .2s;box-shadow:0 4px 12px rgba(30,95,204,.3);"
+        onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        💾 Guardar observaciones
+      </button>
+      <span style="font-size:.76rem;color:var(--text-muted);font-weight:600;">Los cambios se reflejan inmediatamente en sociograma y perfiles</span>
+    </div>
+
+    <div style="margin-top:1rem;background:var(--bg);border-radius:10px;padding:.8rem 1rem;font-size:.75rem;color:var(--text-secondary);font-weight:600;line-height:1.7;">
+      <strong>Señales de agresor:</strong> 📋 Partes por agresión/exclusión · 👊 Molesta/ridiculiza activamente<br>
+      <strong>Señales de víctima:</strong> 😢 Malestar/ansiedad/evita el patio · 📞 Comunicación de familia o alumno/a<br>
+      <strong>Señal de aislamiento:</strong> 🤝 Sin grupo ni pareja en actividades<br>
+      <em style="color:var(--text-muted);">Lógica: agresor sin señales de víctima → eleva a acosador; víctima sin agresor → eleva a acosado; ambos → conflictivo; aislado+pocos apoyos → refuerza aislado.</em>
+    </div>`;
+}
+
+function toggleTQ(name,q,btn){
+  if(!window._teacherEdit[name]) window._teacherEdit[name]={};
+  const cur=!!window._teacherEdit[name][q];
+  window._teacherEdit[name][q]=!cur;
+  btn.classList.toggle('active',!cur);
+}
+
+async function saveTeacherData(cls,session){
+  const key=cls+'_'+session;
+  try{
+    if(fbOk){
+      await db.collection('cv_docente').doc(key).set(window._teacherEdit||{});
+    } else {
+      localStorage.setItem('cv_td_'+key,JSON.stringify(window._teacherEdit||{}));
+    }
+    showToast('✅ Observaciones guardadas — recargando...','success');
+    setTimeout(()=>loadDash(),600);
+  } catch(e){
+    showToast('Error guardando: '+e.message,'error');
+  }
 }
 
 // ════════════════════════════════════════
