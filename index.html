@@ -1426,13 +1426,18 @@ function analyze(responses,students){
     let role='normal';
     if(p>=maxPos*0.6&&ng<2) role='lider';
     else if(p<=1&&n>=4) role='aislado';
-    // ── Sistema de 3 niveles (literatura sociométrica: Coie et al., Navarra) ──
-    // Nivel 1 (ng=2): "Conflictivo" — señal de vigilancia, sin etiquetar gravemente
-    // Nivel 2 (ng≥3): clasificación seria por ratio pos/neg
-    //   · ng < p → popular que molesta a muchos → "controvertido" → posible acosador
-    //   · ng ≥ p → rechazado y señalado por muchos → posible acosado (víctima)
+    // ── Sistema de 3 niveles con margen de confianza ──────────────────────────
+    // Nivel 1 (ng=2):          "Conflictivo"   — señal leve, vigilar
+    // Nivel 2 (ng≥3, empate):  "Conflictivo"   — base insuficiente para etiquetar grave
+    //                          (|p-ng| ≤ 1: diferencia de 1 voto no es estadísticamente sólida)
+    // Nivel 3 (ng≥3, margen≥2):
+    //   · p - ng ≥ 2  → popular que molesta a muchos → posible ACOSADOR (controvertido)
+    //   · ng - p ≥ 2  → rechazado y señalado        → posible ACOSADO   (víctima)
     if(ng>=3){
-      role = ng>=p ? 'acosado' : 'acosador';
+      const margen = p - ng; // >0 = más positivos, <0 = más negativos
+      if(margen >= 2)       role = 'acosador';   // claramente más popular que rechazado → molesta
+      else if(margen <= -2) role = 'acosado';    // claramente más rechazado que popular → víctima
+      else                  role = 'conflicto';  // empate o diferencia de 1: base insuficiente
     } else if(ng===2){
       role='conflicto';
     }
