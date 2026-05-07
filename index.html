@@ -1149,7 +1149,7 @@ async function loadCenterSummary(session, body){
     const totalResp=summary.reduce((s,c)=>s+c.responses,0);
     const clasesConDatos=summary.filter(c=>c.responses>0);
     const avgClima=clasesConDatos.length>0?(clasesConDatos.reduce((s,c)=>s+c.a.clima,0)/clasesConDatos.length):0;
-    const totalRisk=summary.reduce((s,c)=>s+c.a.profiles.filter(p=>p.role==='acosado'||p.role==='acosador').length,0);
+    const totalRisk=summary.reduce((s,c)=>s+c.a.profiles.filter(p=>p.role==='acosado'||p.role==='acosador'||p.role==='conflicto').length,0);
     const totalAislados=summary.reduce((s,c)=>s+c.a.profiles.filter(p=>p.role==='aislado').length,0);
     const totalLideres=summary.reduce((s,c)=>s+c.a.profiles.filter(p=>p.role==='lider').length,0);
 
@@ -1158,7 +1158,7 @@ async function loadCenterSummary(session, body){
       const pct=students>0?Math.round(responses/students*100):0;
       const climaCol=a.n===0?'var(--text-muted)':a.clima>=4?'var(--accent)':a.clima>=3?'var(--warning)':'var(--danger)';
       const climaTxt=a.n===0?'—':a.clima.toFixed(1);
-      const risk=a.profiles.filter(p=>p.role==='acosado'||p.role==='acosador').length;
+      const risk=a.profiles.filter(p=>p.role==='acosado'||p.role==='acosador'||p.role==='conflicto').length;
       return `<tr>
         <td style="font-weight:800;color:var(--primary)">${cls}º</td>
         <td>${responses} / ${students} <span style="color:var(--text-muted);font-size:.75rem">(${pct}%)</span></td>
@@ -1252,7 +1252,8 @@ async function loadCenterSummary(session, body){
           labels:summary.map(c=>c.cls+'º'),
           datasets:[
             {label:'Aislados',data:summary.map(c=>c.a.profiles.filter(p=>p.role==='aislado').length),backgroundColor:'rgba(96,165,250,.75)',borderRadius:4,borderSkipped:false},
-            {label:'En riesgo',data:summary.map(c=>c.a.profiles.filter(p=>p.role==='acosado'||p.role==='acosador').length),backgroundColor:'rgba(239,68,68,.75)',borderRadius:4,borderSkipped:false}
+            {label:'En riesgo',data:summary.map(c=>c.a.profiles.filter(p=>p.role==='acosado'||p.role==='acosador').length),backgroundColor:'rgba(239,68,68,.75)',borderRadius:4,borderSkipped:false},
+            {label:'En vigilancia',data:summary.map(c=>c.a.profiles.filter(p=>p.role==='conflicto').length),backgroundColor:'rgba(139,92,246,.75)',borderRadius:4,borderSkipped:false}
           ]
         },
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{family:'Nunito',weight:'600'},padding:12}}},
@@ -1263,14 +1264,14 @@ async function loadCenterSummary(session, body){
       const rr=document.getElementById('centerRolesChart');
       if(rr){
         const allProfiles=summary.flatMap(c=>c.a.profiles);
-        const rc={lider:0,aislado:0,acosado:0,acosador:0,normal:0};
+        const rc={lider:0,aislado:0,acosado:0,acosador:0,conflicto:0,normal:0};
         allProfiles.forEach(p=>{if(rc[p.role]!==undefined)rc[p.role]++;else rc.normal++;});
         if(Object.values(rc).some(v=>v>0)){
           charts.centerRoles=new Chart(rr,{
             type:'doughnut',
-            data:{labels:['Líderes','Aislados','Posible acosado','Posible acosador','Normal'],
-              datasets:[{data:[rc.lider,rc.aislado,rc.acosado,rc.acosador,rc.normal],
-                backgroundColor:['#22c55e','#60a5fa','#f7800a','#ef4444','#94a3b8'],borderWidth:3,borderColor:'white'}]},
+            data:{labels:['Líderes','Aislados','Posible acosado','Posible acosador','Conflictivo','Normal'],
+              datasets:[{data:[rc.lider,rc.aislado,rc.acosado,rc.acosador,rc.conflicto,rc.normal],
+                backgroundColor:['#22c55e','#60a5fa','#f7800a','#ef4444','#8b5cf6','#94a3b8'],borderWidth:3,borderColor:'white'}]},
             options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
               plugins:{legend:{position:'bottom',labels:{font:{family:'Nunito',weight:'600',size:12},padding:10,usePointStyle:true,pointStyle:'circle'}}}}
           });
@@ -1337,12 +1338,19 @@ function renderDash(responses,students,cls,session,body){
   charts={};
 
   const alerts=a.profiles.filter(p=>p.role==='acosado'||p.role==='acosador');
-  const alertHtml=alerts.length>0?`
-    <div class="alert-banner">
+  const watch=a.profiles.filter(p=>p.role==='conflicto');
+  const alertHtml=[
+    alerts.length>0?`<div class="alert-banner">
       <span style="font-size:1.4rem">⚠️</span>
       <div><h4>Situaciones de atención detectadas</h4>
       <p>${alerts.map(x=>`<strong>${x.name}</strong> (${roleLbl(x.role)})`).join(', ')}</p></div>
-    </div>`:'';
+    </div>`:'',
+    watch.length>0?`<div class="alert-banner" style="background:#ede9fe;border-color:#c4b5fd;animation:none;">
+      <span style="font-size:1.4rem">🔶</span>
+      <div><h4 style="color:#6d28d9;">En vigilancia (conflictivos)</h4>
+      <p style="color:#4c1d95;">${watch.map(x=>`<strong>${x.name}</strong>`).join(', ')} — 2 nominaciones negativas. Observar evolución.</p></div>
+    </div>`:''
+  ].join('');
 
   body.innerHTML=`
     ${alertHtml}
@@ -1375,6 +1383,7 @@ function renderDash(responses,students,cls,session,body){
         <span style="display:flex;align-items:center;gap:.35rem;"><span style="width:12px;height:12px;border-radius:50%;background:#3b82f6;display:inline-block;"></span>Aislado/a</span>
         <span style="display:flex;align-items:center;gap:.35rem;"><span style="width:12px;height:12px;border-radius:50%;background:#ef4444;display:inline-block;"></span>Posible acosador</span>
         <span style="display:flex;align-items:center;gap:.35rem;"><span style="width:12px;height:12px;border-radius:50%;background:#f7800a;display:inline-block;"></span>Posible acosado</span>
+        <span style="display:flex;align-items:center;gap:.35rem;"><span style="width:12px;height:12px;border-radius:50%;background:#8b5cf6;display:inline-block;"></span>Conflictivo</span>
         <span style="display:flex;align-items:center;gap:.35rem;"><span style="width:12px;height:12px;border-radius:50%;background:#94a3b8;display:inline-block;"></span>Normal</span>
         <span style="display:flex;align-items:center;gap:.4rem;"><svg width="28" height="10" viewBox="0 0 28 10"><line x1="0" y1="5" x2="22" y2="5" stroke="#22c55e" stroke-width="2"/><polygon points="22,1 28,5 22,9" fill="#22c55e"/></svg>Positiva</span>
         <span style="display:flex;align-items:center;gap:.4rem;"><svg width="28" height="10" viewBox="0 0 28 10"><line x1="0" y1="5" x2="22" y2="5" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,3"/><polygon points="22,1 28,5 22,9" fill="#ef4444"/></svg>Negativa</span>
@@ -1417,12 +1426,15 @@ function analyze(responses,students){
     let role='normal';
     if(p>=maxPos*0.6&&ng<2) role='lider';
     else if(p<=1&&n>=4) role='aislado';
-    // Umbral dinámico: mínimo 2 negativos en clases pequeñas, 3 en medianas, 4 en grandes
-    const negThreshold = n >= 25 ? 4 : n >= 15 ? 3 : 2;
-    if(ng>=negThreshold){
-      // ng>=p → más negativos que positivos = rechazado/señalado → posible víctima (acosado)
-      // ng<p  → popular pero molesta a muchos → posible agresor (acosador)
-      role = ng >= p ? 'acosado' : 'acosador';
+    // ── Sistema de 3 niveles (literatura sociométrica: Coie et al., Navarra) ──
+    // Nivel 1 (ng=2): "Conflictivo" — señal de vigilancia, sin etiquetar gravemente
+    // Nivel 2 (ng≥3): clasificación seria por ratio pos/neg
+    //   · ng < p → popular que molesta a muchos → "controvertido" → posible acosador
+    //   · ng ≥ p → rechazado y señalado por muchos → posible acosado (víctima)
+    if(ng>=3){
+      role = ng>=p ? 'acosado' : 'acosador';
+    } else if(ng===2){
+      role='conflicto';
     }
     const myR=responses.find(r=>r.alumno===s);
     const tags=[];
@@ -1441,7 +1453,7 @@ function analyze(responses,students){
 }
 
 function roleLbl(r){return{lider:'Líder',aislado:'Aislado/a',acosador:'Posible acosador',acosado:'Posible acosado',conflicto:'Conflictivo',normal:'Normal'}[r]||r;}
-function roleBadge(r){return{lider:'🌟',aislado:'💙',acosador:'⚠️',acosado:'🆘',normal:'',conflicto:'💜'}[r]||'';}
+function roleBadge(r){return{lider:'🌟',aislado:'💙',acosador:'⚠️',acosado:'🆘',normal:'',conflicto:'🔶'}[r]||'';}
 const roleColors={lider:'#22c55e',aislado:'#3b82f6',acosador:'#ef4444',acosado:'#f7800a',normal:'#94a3b8',conflicto:'#8b5cf6'};
 
 // ════════════════════════════════════════
@@ -1469,11 +1481,11 @@ function drawCharts(a){
 
   const c2=document.getElementById('rolesChart');
   const rc=a.roleCounts;
-  const rData=[rc.lider||0,rc.aislado||0,rc.acosado||0,rc.acosador||0,rc.normal||0];
+  const rData=[rc.lider||0,rc.aislado||0,rc.acosado||0,rc.acosador||0,rc.conflicto||0,rc.normal||0];
   if(c2&&rData.some(v=>v>0)) charts.roles=new Chart(c2,{
     type:'doughnut',
-    data:{labels:['Líderes','Aislados','Posible acosado','Posible acosador','Normal'],
-      datasets:[{data:rData,backgroundColor:['#22c55e','#60a5fa','#f7800a','#ef4444','#94a3b8'],borderWidth:3,borderColor:'white'}]},
+    data:{labels:['Líderes','Aislados','Posible acosado','Posible acosador','Conflictivo','Normal'],
+      datasets:[{data:rData,backgroundColor:['#22c55e','#60a5fa','#f7800a','#ef4444','#8b5cf6','#94a3b8'],borderWidth:3,borderColor:'white'}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
       plugins:{legend:{position:'bottom',labels:{font:{family:'Nunito',weight:'600',size:12},padding:12,usePointStyle:true,pointStyle:'circle'}}}}
   });
@@ -1753,6 +1765,7 @@ Clima general: ${a.clima.toFixed(1)}/5
 Líderes: ${a.profiles.filter(p=>p.role==='lider').map(p=>p.name).join(', ')||'ninguno'}
 Aislados: ${a.profiles.filter(p=>p.role==='aislado').map(p=>p.name).join(', ')||'ninguno'}
 En riesgo: ${a.profiles.filter(p=>p.role==='acosado'||p.role==='acosador').map(p=>p.name+' ('+roleLbl(p.role)+')').join(', ')||'ninguno'}
+En vigilancia (conflictivos): ${a.profiles.filter(p=>p.role==='conflicto').map(p=>p.name).join(', ')||'ninguno'}
 
 Perfiles individuales:
 ${perfiles}
