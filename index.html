@@ -1417,7 +1417,13 @@ function analyze(responses,students){
     let role='normal';
     if(p>=maxPos*0.6&&ng<2) role='lider';
     else if(p<=1&&n>=4) role='aislado';
-    if(ng>=2) role=ng>=p?'acosador':'acosado';
+    // Umbral dinámico: mínimo 2 negativos en clases pequeñas, 3 en medianas, 4 en grandes
+    const negThreshold = n >= 25 ? 4 : n >= 15 ? 3 : 2;
+    if(ng>=negThreshold){
+      // ng>=p → más negativos que positivos = rechazado/señalado → posible víctima (acosado)
+      // ng<p  → popular pero molesta a muchos → posible agresor (acosador)
+      role = ng >= p ? 'acosado' : 'acosador';
+    }
     const myR=responses.find(r=>r.alumno===s);
     const tags=[];
     if(myR){const rp=myR.respuestas||{};
