@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root{
   --primary:#1e5fcc;--primary-dark:#164a9e;--primary-light:#e8f1fc;
@@ -480,6 +480,47 @@ details summary::-webkit-details-marker{display:none;}
 
 /* No Data / Alert */
 .no-data{text-align:center;padding:4rem 2rem;color:var(--text-muted);}
+.chart-wrap{position:relative;height:220px;width:100%;overflow:hidden;}
+.indices-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:.5rem;}
+.index-card{background:var(--bg);border-radius:12px;padding:1rem 1.1rem;border:1.5px solid var(--border);position:relative;overflow:hidden;}
+.index-card::before{content:'';position:absolute;bottom:0;left:0;right:0;height:4px;}
+.index-card.good::before{background:var(--accent);}
+.index-card.warn::before{background:var(--warning);}
+.index-card.bad::before{background:var(--danger);}
+.index-card.info::before{background:var(--primary);}
+.index-label{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:.35rem;}
+.index-value{font-family:'Poppins',sans-serif;font-size:1.9rem;font-weight:800;line-height:1;}
+.index-card.good .index-value{color:var(--accent);}
+.index-card.warn .index-value{color:var(--warning);}
+.index-card.bad .index-value{color:var(--danger);}
+.index-card.info .index-value{color:var(--primary);}
+.index-interp{font-size:.72rem;font-weight:600;color:var(--text-secondary);margin-top:.3rem;line-height:1.4;}
+.index-bar{height:5px;background:var(--border);border-radius:3px;margin-top:.6rem;overflow:hidden;}
+.index-bar-fill{height:100%;border-radius:3px;transition:width .6s ease;}
+/* Group formation */
+.group-controls{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;}
+.group-sel{padding:.45rem .8rem;border:1.5px solid var(--border);border-radius:9px;font-family:'Nunito',sans-serif;font-weight:700;font-size:.82rem;background:white;color:var(--text);cursor:pointer;outline:none;}
+.group-btn{padding:.48rem 1.1rem;background:var(--primary);color:white;border:none;border-radius:9px;font-family:'Nunito',sans-serif;font-weight:800;font-size:.82rem;cursor:pointer;transition:all .2s;}
+.group-btn:hover{background:var(--primary-dark);transform:translateY(-1px);}
+.groups-output{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.85rem;}
+.group-card{background:var(--bg);border:2px solid var(--border);border-radius:12px;overflow:hidden;}
+.group-card-header{background:var(--primary);color:white;padding:.55rem .9rem;font-weight:800;font-size:.82rem;display:flex;align-items:center;gap:.4rem;}
+.group-card-body{padding:.75rem .9rem;display:flex;flex-direction:column;gap:.35rem;}
+.group-member{display:flex;align-items:center;gap:.5rem;font-size:.8rem;font-weight:700;}
+.group-member-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.group-warning{background:var(--danger-light);border:1px solid #fca5a5;border-radius:8px;padding:.4rem .65rem;font-size:.7rem;font-weight:700;color:var(--danger);margin-top:.35rem;}
+.group-tip{background:var(--accent-light);border:1px solid #86efac;border-radius:8px;padding:.4rem .65rem;font-size:.7rem;font-weight:700;color:#14532d;margin-top:.2rem;}
+/* Classroom seating */
+.seating-wrap{overflow-x:auto;}
+.classroom-grid{display:inline-grid;gap:.65rem;padding:.5rem;}
+.desk-pair{display:flex;gap:.4rem;}
+.desk{background:white;border:2px solid var(--border);border-radius:9px;padding:.45rem .6rem;min-width:88px;text-align:center;position:relative;transition:all .2s;}
+.desk:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+.desk-name{font-size:.73rem;font-weight:800;color:var(--text);}
+.desk-role{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:.1rem;}
+.desk-dot{width:8px;height:8px;border-radius:50%;margin:0 auto .3rem;}
+.blackboard{background:linear-gradient(135deg,#1e3a5f,#1e40af);color:white;border-radius:10px;padding:.6rem 1.5rem;text-align:center;font-weight:800;font-size:.85rem;letter-spacing:2px;margin-bottom:1rem;}
+.seating-empty{background:var(--bg);border:2px dashed var(--border);border-radius:9px;min-width:88px;}
 .no-data .icon{font-size:4rem;margin-bottom:1rem;opacity:.5;}
 .no-data h3{font-size:1.15rem;font-weight:800;color:var(--text-secondary);margin-bottom:.5rem;}
 .no-data p{font-size:.9rem;font-weight:600;}
@@ -1168,8 +1209,8 @@ async function loadCenterSummary(session, body){
         students=JSON.parse(localStorage.getItem('cv_al_'+cls)||'[]');
       }
       if(students.length>0){
-        const a=analyze(responses,students);
-        summary.push({cls,responses:responses.length,students:students.length,a});
+        const a=analyze(dedupeResponses(responses),students);
+        summary.push({cls,responses:dedupeResponses(responses).length,students:students.length,a});
       }
     }
 
@@ -1336,14 +1377,17 @@ async function loadDash(){
   try {
     let responses=[], students=[], teacherData={};
     if(fbOk){
-      const [rSnap,cDoc,tdDoc]=await Promise.all([
+      const [rSnap,cDoc]=await Promise.all([
         db.collection('cv_respuestas').where('clase','==',cls).where('sesion','==',session).get(),
-        db.collection('cv_clases').doc(cls).get(),
-        db.collection('cv_docente').doc(cls+'_'+session).get()
+        db.collection('cv_clases').doc(cls).get()
       ]);
       responses=rSnap.docs.map(d=>d.data());
       students=cDoc.exists?(cDoc.data().alumnos||[]):[];
-      teacherData=tdDoc.exists?(tdDoc.data()||{}):{};
+      // Leer observaciones docente por separado para que un error no bloquee todo
+      try{
+        const tdDoc=await db.collection('cv_docente').doc(cls+'_'+session).get();
+        teacherData=tdDoc.exists?(tdDoc.data()||{}):{};
+      }catch(e){ console.warn('cv_docente sin permisos aún:',e.message); }
     } else {
       const all=JSON.parse(localStorage.getItem('cv_resp')||'[]');
       responses=all.filter(r=>r.clase===cls&&r.sesion===session);
@@ -1359,6 +1403,7 @@ async function loadDash(){
       body.innerHTML=`<div class="no-data"><div class="icon">📭</div><h3>Sin respuestas aún</h3><p>Clase ${cls}º — ${sesLbl(session)}. Los datos aparecerán aquí cuando los alumnos completen el cuestionario.</p></div>`;
       return;
     }
+    responses=dedupeResponses(responses);
     renderDash(responses,students,cls,session,body,teacherData);
   } catch(e){
     console.error(e);
@@ -1431,7 +1476,9 @@ function renderDash(responses,students,cls,session,body,teacherData={}){
       <div class="panel-title">🧑‍🤝‍🧑 Perfiles individuales</div>
       <div class="profiles-grid" id="profilesGrid"></div>
     </div>
-    <div class="panel" style="margin-bottom:1.5rem;" id="teacherPanel"></div>`;
+    <div class="panel" style="margin-bottom:1.5rem;" id="teacherPanel"></div>
+    <div class="panel" style="margin-bottom:1.5rem;" id="indicesPanel"></div>
+    <div class="panel" style="margin-bottom:1.5rem;" id="groupPanel"></div>`;
 
   setTimeout(()=>{
     drawCharts(a);
@@ -1439,13 +1486,26 @@ function renderDash(responses,students,cls,session,body,teacherData={}){
     drawSociogram(a,responses);
     drawProfiles(a);
     renderTeacherPanel(students,a,teacherData,cls,session);
+    renderIndicesPanel(a,responses);
+    renderGroupPanel(a,students);
   },50);
+}
+
+// ════════════════════════════════════════
+// DEDUPLICAR RESPUESTAS (un alumno puede haber enviado varias veces)
+// ════════════════════════════════════════
+function dedupeResponses(responses){
+  // Mantener solo la última respuesta por alumno
+  const map=new Map();
+  responses.forEach(r=>map.set(r.alumno,r));
+  return [...map.values()];
 }
 
 // ════════════════════════════════════════
 // ANÁLISIS
 // ════════════════════════════════════════
 function analyze(responses,students,teacherData={}){
+  responses=dedupeResponses(responses); // ← un alumno, una respuesta
   const pos={}, neg={}, intim={};
   const posByNames={}, negByNames={};
   students.forEach(s=>{pos[s]=0;neg[s]=0;intim[s]=0;posByNames[s]=new Set();negByNames[s]=[];});
@@ -1892,6 +1952,300 @@ function drawProfiles(a){
 }
 
 // ════════════════════════════════════════
+// UTILIDADES NOMBRE ANÓNIMO
+// ════════════════════════════════════════
+function anonName(fullName){
+  const p=fullName.trim().split(/\s+/);
+  return p[1]?`${p[0]} ${p[1][0]}.`:p[0];
+}
+
+// ════════════════════════════════════════
+// ÍNDICES SOCIOMÉTRICOS
+// ════════════════════════════════════════
+function calcSocioIndices(profiles,responses){
+  const n=profiles.length;
+  if(n===0) return {};
+
+  // Elecciones mutuas
+  let mutualPairs=0;
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+    const pi=profiles[i],pj=profiles[j];
+    if(pi.nominaPos.includes(pj.name)&&pj.nominaPos.includes(pi.name)) mutualPairs++;
+  }
+  const maxMutual=n*(n-1)/2;
+  const IC=maxMutual>0?mutualPairs/maxMutual:0;
+
+  // Integración: % con ≥1 elección mutua
+  const integrated=profiles.filter(p=>
+    profiles.some(o=>o!==p&&o.nominaPos.includes(p.name)&&p.nominaPos.includes(o.name))
+  ).length;
+  const II=n>0?integrated/n:0;
+
+  // Rechazo: % con ≥2 nominaciones negativas
+  const rejected=profiles.filter(p=>p.neg>=2).length;
+  const IR=n>0?rejected/n:0;
+
+  // Expansividad: media de elecciones positivas únicas emitidas
+  const nr=responses.length;
+  const totalEmit=responses.reduce((s,r)=>{
+    const rp=r.respuestas||{};
+    return s+new Set([...(rp.amigos||[]),...(rp.trabajo||[]),...(rp.ayuda||[]),...(rp.lider||[])]).size;
+  },0);
+  const expansividad=nr>0?totalEmit/nr:0;
+
+  // Puntuación sociométrica normalizada (PSN) media
+  const psn=n>1?profiles.reduce((s,p)=>s+(p.pos-p.neg)/(n-1),0)/n:0;
+
+  // Reciprocidad: % de nominaciones positivas que son mutuas
+  const totalNomPos=profiles.reduce((s,p)=>s+p.nominaPos.length,0);
+  const recip=totalNomPos>0?(mutualPairs*2)/totalNomPos:0;
+
+  return{IC,II,IR,expansividad,psn,recip,mutualPairs,integrated,rejected};
+}
+
+function renderIndicesPanel(a,responses){
+  const panel=document.getElementById('indicesPanel');
+  if(!panel) return;
+  const idx=calcSocioIndices(a.profiles,responses);
+  const n=a.profiles.length;
+
+  function indexCard(label,value,unit,interp,level,pct,desc){
+    return `<div class="index-card ${level}">
+      <div class="index-label">${label}</div>
+      <div class="index-value">${value}<span style="font-size:.9rem;font-weight:600;opacity:.7;margin-left:.2rem;">${unit}</span></div>
+      <div class="index-interp">${interp}</div>
+      <div class="index-bar"><div class="index-bar-fill" style="width:${Math.min(100,pct)}%;background:${level==='good'?'var(--accent)':level==='warn'?'var(--warning)':'var(--danger)'}"></div></div>
+      <div style="font-size:.65rem;color:var(--text-muted);margin-top:.35rem;font-style:italic;">${desc}</div>
+    </div>`;
+  }
+
+  const IC=idx.IC||0, II=idx.II||0, IR=idx.IR||0;
+  const exp=idx.expansividad||0, psn=idx.psn||0, rec=idx.recip||0;
+
+  const cards=[
+    indexCard('Índice de Cohesión',(IC*100).toFixed(1),'%',
+      IC>=0.15?'Cohesión alta: el grupo está bien conectado':IC>=0.08?'Cohesión media: vínculos moderados':'Cohesión baja: grupo poco unido',
+      IC>=0.15?'good':IC>=0.08?'warn':'bad', IC*100*3,
+      'Proporción de relaciones mutuas existentes vs posibles. Ref: >15% bueno'),
+    indexCard('Índice de Integración',(II*100).toFixed(0),'%',
+      II>=0.7?'Alta: la mayoría tiene amistades mutuas':II>=0.5?'Media: integración parcial del grupo':'Baja: muchos alumnos sin vínculos mutuos',
+      II>=0.7?'good':II>=0.5?'warn':'bad', II*100,
+      '% de alumnos con al menos una elección recíproca. Ref: >70% bueno'),
+    indexCard('Índice de Rechazo',(IR*100).toFixed(0),'%',
+      IR<=0.1?'Bajo: pocos alumnos señalados negativamente':IR<=0.25?'Moderado: vigilar evolución':'Alto: conflictividad significativa',
+      IR<=0.1?'good':IR<=0.25?'warn':'bad', IR*100*4,
+      '% de alumnos con 2+ nominaciones negativas. Ref: <10% normal'),
+    indexCard('Reciprocidad',(rec*100).toFixed(0),'%',
+      rec>=0.4?'Alta: las amistades son correspondidas':rec>=0.25?'Media: bastantes vínculos unilaterales':'Baja: muchas elecciones no correspondidas',
+      rec>=0.4?'good':rec>=0.25?'warn':'bad', rec*100,
+      '% de elecciones positivas que son mutuas. Ref: >40% bueno'),
+    indexCard('Expansividad',exp.toFixed(1),'cands/al.',
+      exp>=3?'Alta: alumnos socialmente activos':exp>=2?'Media: interacción normal':'Baja: tendencia al aislamiento',
+      exp>=3?'good':exp>=2?'warn':'bad', exp/5*100,
+      'Media de compañeros nominados positivamente por alumno'),
+    indexCard('Clima emocional',a.clima.toFixed(2),'/5',
+      a.clima>=4?'Muy positivo: bienestar generalizado':a.clima>=3?'Positivo: clima satisfactorio':'A mejorar: malestar notable en el grupo',
+      a.clima>=4?'good':a.clima>=3?'warn':'bad', a.clima/5*100,
+      'Media de autopercepción de bienestar, seguridad y respeto'),
+  ];
+
+  // Interpretación global automática
+  const score=[(IC>=0.15?2:IC>=0.08?1:0),(II>=0.7?2:II>=0.5?1:0),(IR<=0.1?2:IR<=0.25?1:0),(a.clima>=4?2:a.clima>=3?1:0)].reduce((a,b)=>a+b,0);
+  const globalLevel=score>=6?{txt:'Muy favorable',col:'#22c55e',bg:'#f0fdf4',icon:'🟢'}:score>=4?{txt:'Favorable con áreas de mejora',col:'#f59e0b',bg:'#fefce8',icon:'🟡'}:score>=2?{txt:'Con tensiones — intervención recomendada',col:'#f7800a',bg:'#fff7ed',icon:'🟠'}:{txt:'Crítico — intervención prioritaria',col:'#ef4444',bg:'#fef2f2',icon:'🔴'};
+
+  panel.innerHTML=`
+    <div class="panel-title">📐 Índices Sociométricos
+      <span style="font-size:.72rem;font-weight:600;color:var(--text-muted);margin-left:.5rem;">Basados en ${n} alumnos · ${a.n} respuestas · ${idx.mutualPairs||0} pares mutuos</span>
+    </div>
+    <div style="background:${globalLevel.bg};border-radius:12px;padding:.85rem 1.1rem;margin-bottom:1.1rem;display:flex;align-items:center;gap:.75rem;">
+      <span style="font-size:1.5rem;">${globalLevel.icon}</span>
+      <div>
+        <div style="font-weight:800;font-size:.9rem;color:${globalLevel.col};">Diagnóstico de convivencia: ${globalLevel.txt}</div>
+        <div style="font-size:.78rem;color:var(--text-secondary);font-weight:600;margin-top:.15rem;">
+          ${idx.integrated||0} alumnos integrados · ${idx.rejected||0} con señales de rechazo · ${idx.mutualPairs||0} pares de amistad mutua
+        </div>
+      </div>
+    </div>
+    <div class="indices-grid">${cards.join('')}</div>`;
+}
+
+// ════════════════════════════════════════
+// FORMADOR DE GRUPOS / DISPOSICIÓN DE AULA
+// ════════════════════════════════════════
+function formGroups(profiles,groupSize){
+  const order={acosador:0,acosado:1,enriesgo:2,aislado:3,conflicto:4,lider:5,normal:6};
+  const sorted=[...profiles].sort((a,b)=>(order[a.role]||6)-(order[b.role]||6));
+  const n=sorted.length;
+  const numGroups=Math.max(1,Math.ceil(n/groupSize));
+  const groups=Array.from({length:numGroups},()=>({members:[],warnings:[],tips:[]}));
+
+  // Score: lower is better placement
+  function placeScore(g,student){
+    let score=g.members.length*10; // prefer less populated
+    const mem=g.members;
+    if(student.role==='acosador'&&mem.some(m=>m.role==='acosador')) score+=500;
+    if(student.role==='acosado'&&mem.some(m=>student.negByNames.includes(m.name))) score+=1000;
+    if(student.role==='acosador'&&mem.some(m=>m.role==='acosado')) score+=800;
+    if(mem.length>=groupSize) score+=9999;
+    // Bonus: isolated student near their supporters
+    if(student.role==='aislado'&&mem.some(m=>student.nominadoPorNames.includes(m.name))) score-=50;
+    // Bonus: leader in group without one
+    if(student.role==='lider'&&!mem.some(m=>m.role==='lider')) score-=30;
+    return score;
+  }
+
+  sorted.forEach(s=>{
+    const best=groups.reduce((b,g,i)=>placeScore(g,s)<placeScore(b.g,s)?{g,i}:b,{g:groups[0],i:0});
+    best.g.members.push(s);
+  });
+
+  // Add warnings and tips per group
+  groups.forEach(g=>{
+    const mem=g.members;
+    const hasAgg=mem.some(m=>m.role==='acosador');
+    const hasVic=mem.some(m=>m.role==='acosado');
+    if(hasAgg&&hasVic) g.warnings.push('⚠️ Posible acosador/a y víctima en el mismo grupo');
+    if(mem.filter(m=>m.role==='acosador').length>1) g.warnings.push('⚠️ Más de un posible acosador/a');
+    const ais=mem.filter(m=>m.role==='aislado');
+    ais.forEach(a=>{
+      const supporter=mem.find(m=>a.nominadoPorNames.includes(m.name));
+      if(supporter) g.tips.push(`💡 ${anonName(a.name)} junto a ${anonName(supporter.name)}, que le apoya`);
+    });
+    if(!mem.some(m=>m.role==='lider')&&mem.length>1) g.warnings.push('ℹ️ Sin líder natural en este grupo');
+  });
+
+  return groups.filter(g=>g.members.length>0);
+}
+
+function buildSeating(profiles){
+  // Pairs: place pairs optimally for paired desk layout
+  const order={acosador:0,acosado:1,enriesgo:2,aislado:3,conflicto:4,lider:5,normal:6};
+  const sorted=[...profiles].sort((a,b)=>(order[a.role]||6)-(order[b.role]||6));
+  const pairs=[];
+  const used=new Set();
+
+  // First try to pair isolated students with supporters
+  sorted.filter(s=>s.role==='aislado'&&!used.has(s.name)).forEach(ais=>{
+    if(used.has(ais.name)) return;
+    const sup=sorted.find(o=>!used.has(o.name)&&o!==ais&&ais.nominadoPorNames.includes(o.name));
+    if(sup){pairs.push([ais,sup]);used.add(ais.name);used.add(sup.name);}
+  });
+  // Then pair remaining — avoid aggressor+victim
+  const rem=sorted.filter(s=>!used.has(s.name));
+  for(let i=0;i<rem.length;i+=2){
+    const a=rem[i], b=rem[i+1]||null;
+    if(b&&((a.role==='acosador'&&b.role==='acosado')||(a.role==='acosado'&&b.role==='acosador'))){
+      // Swap b with next available
+      const swap=rem.find((o,j)=>j>i+1&&!((a.role==='acosador'&&o.role==='acosado')||(a.role==='acosado'&&o.role==='acosador')));
+      if(swap){const si=rem.indexOf(swap);[rem[i+1],rem[si]]=[rem[si],rem[i+1]];}
+    }
+    pairs.push([rem[i],rem[i+1]||null]);
+  }
+  return pairs;
+}
+
+function renderGroupPanel(a,students){
+  const panel=document.getElementById('groupPanel');
+  if(!panel) return;
+  window._groupProfiles=[...a.profiles];
+
+  panel.innerHTML=`
+    <div class="panel-title">👥 Formador de grupos y disposición de aula</div>
+    <div style="font-size:.81rem;color:var(--text-muted);font-weight:600;margin-bottom:1rem;">
+      El algoritmo evita juntar posibles acosadores/as con víctimas, distribuye líderes y coloca a los alumnos aislados junto a quienes les apoyan.
+    </div>
+    <div class="group-controls">
+      <select class="group-sel" id="groupModeEl" onchange="updateGroupPanel()">
+        <option value="grupos">Grupos de trabajo</option>
+        <option value="mesas">Disposición de mesas (parejas)</option>
+      </select>
+      <select class="group-sel" id="groupSizeEl" style="" onchange="updateGroupPanel()">
+        <option value="2">2 por grupo</option>
+        <option value="3">3 por grupo</option>
+        <option value="4">4 por grupo</option>
+        <option value="5">5 por grupo</option>
+        <option value="6">6 por grupo</option>
+      </select>
+      <button class="group-btn" onclick="printGroupPanel()">🖨️ Imprimir</button>
+    </div>
+    <div id="groupResult"></div>`;
+
+  updateGroupPanel();
+}
+
+function updateGroupPanel(){
+  const mode=document.getElementById('groupModeEl')?.value||'grupos';
+  const size=parseInt(document.getElementById('groupSizeEl')?.value||4);
+  const sizeEl=document.getElementById('groupSizeEl');
+  if(sizeEl) sizeEl.style.display=mode==='mesas'?'none':'';
+  const result=document.getElementById('groupResult');
+  if(!result) return;
+
+  if(mode==='mesas'){
+    const pairs=buildSeating(window._groupProfiles||[]);
+    let rows='';
+    // 2 pairs per row
+    for(let i=0;i<pairs.length;i+=2){
+      const r1=pairs[i], r2=pairs[i+1]||null;
+      rows+=`<div style="display:flex;gap:1.5rem;justify-content:center;margin-bottom:.65rem;">
+        ${deskPair(r1)}
+        ${r2?deskPair(r2):'<div style="width:190px;"></div>'}
+      </div>`;
+    }
+    result.innerHTML=`<div class="seating-wrap">
+      <div class="blackboard">📋 PIZARRA</div>
+      ${rows}
+      <div style="text-align:center;margin-top:.75rem;font-size:.75rem;color:var(--text-muted);font-weight:600;">
+        ↑ Frente del aula · ${pairs.length} parejas de mesa · Algoritmo sociométrico aplicado
+      </div>
+    </div>`;
+  } else {
+    const groups=formGroups(window._groupProfiles||[],size);
+    result.innerHTML=`<div class="groups-output">
+      ${groups.map((g,i)=>`
+        <div class="group-card">
+          <div class="group-card-header">
+            <span style="background:rgba(255,255,255,.25);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:900;">${i+1}</span>
+            Grupo ${i+1}
+            <span style="margin-left:auto;opacity:.8;font-size:.75rem;">${g.members.length} alumnos</span>
+          </div>
+          <div class="group-card-body">
+            ${g.members.map(m=>`
+              <div class="group-member">
+                <div class="group-member-dot" style="background:${roleColors[m.role]||'#94a3b8'}"></div>
+                <span>${anonName(m.name)}</span>
+                <span style="margin-left:auto;font-size:.65rem;color:${roleColors[m.role]||'#94a3b8'};font-weight:800;">${roleBadge(m.role)}</span>
+              </div>`).join('')}
+            ${g.warnings.map(w=>`<div class="group-warning">${w}</div>`).join('')}
+            ${g.tips.map(t=>`<div class="group-tip">${t}</div>`).join('')}
+          </div>
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:.85rem;font-size:.75rem;color:var(--text-muted);font-weight:600;">
+      💡 ${groups.length} grupos · Los nombres muestran inicial del apellido para orientación interna.
+    </div>`;
+  }
+}
+
+function deskPair(pair){
+  const [a,b]=pair;
+  function desk(s){
+    if(!s) return `<div class="seating-empty" style="height:64px;"></div>`;
+    const col=roleColors[s.role]||'#94a3b8';
+    return `<div class="desk" style="border-color:${col}30;background:${col}08;">
+      <div class="desk-dot" style="background:${col}"></div>
+      <div class="desk-name">${anonName(s.name)}</div>
+      <div class="desk-role" style="color:${col}">${roleLbl(s.role).substring(0,10)}</div>
+    </div>`;
+  }
+  return `<div class="desk-pair">${desk(a)}${desk(b)}</div>`;
+}
+
+function printGroupPanel(){
+  window.print();
+}
+
+// ════════════════════════════════════════
 // CUESTIONARIO DOCENTE
 // ════════════════════════════════════════
 const TEACHER_QS=[
@@ -1990,51 +2344,128 @@ async function saveTeacherData(cls,session){
 }
 
 // ════════════════════════════════════════
-// IA — PROMPT
+// IA — PROMPT PROFESIONAL (DOS DOCUMENTOS)
 // ════════════════════════════════════════
 async function buildPrompt(cls,session){
-  let responses=[],students=[];
+  let responses=[],students=[],teacherData={};
   if(fbOk){
     const [rSnap,cDoc]=await Promise.all([
       db.collection('cv_respuestas').where('clase','==',cls).where('sesion','==',session).get(),
       db.collection('cv_clases').doc(cls).get()
     ]);
-    responses=rSnap.docs.map(d=>d.data());
+    responses=dedupeResponses(rSnap.docs.map(d=>d.data()));
     students=cDoc.exists?(cDoc.data().alumnos||[]):[];
+    try{const td=await db.collection('cv_docente').doc(cls+'_'+session).get();teacherData=td.exists?td.data()||{}:{};}catch(e){}
   } else {
     const all=JSON.parse(localStorage.getItem('cv_resp')||'[]');
-    responses=all.filter(r=>r.clase===cls&&r.sesion===session);
+    responses=dedupeResponses(all.filter(r=>r.clase===cls&&r.sesion===session));
     students=JSON.parse(localStorage.getItem('cv_al_'+cls)||'[]');
+    teacherData=JSON.parse(localStorage.getItem('cv_td_'+cls+'_'+session)||'{}');
   }
-  const a=analyze(responses,students);
-  const perfiles=a.profiles.map(p=>`- ${p.name} (${roleLbl(p.role)}): +${p.pos} nominaciones positivas, ${p.neg} negativas`).join('\n');
-  return `Eres un orientador educativo experto en convivencia escolar y sociometría. Analiza los datos de la clase ${cls}º (${sesLbl(session)}) del ${SCHOOL} y genera:
+  const a=analyze(responses,students,teacherData);
+  const idx=calcSocioIndices(a.profiles,responses);
+  const year=new Date().getFullYear();
+  const pct=students.length>0?Math.round(responses.length/students.length*100):0;
 
-1. **INFORME DE CONVIVENCIA**:
-   - Resumen del clima de aula (puntuación media: ${a.clima.toFixed(1)}/5)
-   - Análisis del sociograma y red de relaciones
-   - Identificación de subgrupos, líderes y alumnos aislados
-   - Situaciones de riesgo (posible acoso, exclusión, conflictos)
+  // Rol helper
+  const R=role=>a.profiles.filter(p=>p.role===role);
+  function names(arr){return arr.length?arr.map(p=>anonName(p.name)).join(', '):'—';}
+  function semaforo(val,good,warn){return val>=good?'✅ BIEN':val>=warn?'⚠️ MODERADO':'🔴 ATENCIÓN';}
 
-2. **MEDIDAS DE ACTUACIÓN**:
-   - Intervenciones individuales para alumnos en riesgo
-   - Actividades grupales para mejorar la cohesión
-   - Acciones con familias si es necesario
-   - Cronograma de seguimiento
+  // Perfiles excepcionales compactos
+  const exceptional=a.profiles.filter(p=>!['normal','lider'].includes(p.role));
+  const perfiles=exceptional.map(p=>{
+    const td=teacherData[p.name]||{};
+    const obs=Object.entries(td).filter(([,v])=>v).map(([k])=>({q1:'partes',q2:'agresión obs.',q3:'malestar',q4:'sin grupo',q5:'comunicó familia'}[k])).filter(Boolean).join(', ');
+    const bien=p.tags.find(t=>t.l==='Bienestar')?.v||'-';
+    const seg=p.tags.find(t=>t.l==='Seguridad')?.v||'-';
+    return `  ${anonName(p.name)} [${roleLbl(p.role)}]: +${p.pos}pos/${p.neg}neg · bienestar ${bien}/5 · seguridad ${seg}/5 · excl.${p.excluido||'-'}/5 · conf.${p.conflictos_q||'-'}/5${obs?` · docente: ${obs}`:''}${p.negByNames.length?` · señalado por: ${p.negByNames.map(anonName).join(',')}`:''}`; 
+  }).join('\n');
 
-**DATOS — Clase ${cls}º — ${sesLbl(session)} — ${SCHOOL}:**
-Participantes: ${responses.length} de ${students.length} alumnos
-Clima general: ${a.clima.toFixed(1)}/5
-Líderes: ${a.profiles.filter(p=>p.role==='lider').map(p=>p.name).join(', ')||'ninguno'}
-Aislados: ${a.profiles.filter(p=>p.role==='aislado').map(p=>p.name).join(', ')||'ninguno'}
-En riesgo: ${a.profiles.filter(p=>p.role==='acosado'||p.role==='acosador').map(p=>p.name+' ('+roleLbl(p.role)+')').join(', ')||'ninguno'}
-Situación de riesgo (rol sin confirmar): ${a.profiles.filter(p=>p.role==='enriesgo').map(p=>p.name).join(', ')||'ninguno'}
-En vigilancia (conflictivos): ${a.profiles.filter(p=>p.role==='conflicto').map(p=>p.name).join(', ')||'ninguno'}
+  // Observaciones docente condensadas
+  const tdLines=Object.entries(teacherData).map(([n,td])=>{
+    const s=Object.entries(td).filter(([,v])=>v).map(([k])=>({q1:'📋partes',q2:'👊agrede',q3:'😢malestar',q4:'🤝aislado',q5:'📞familia'}[k]||k));
+    return s.length?`  ${anonName(n)}: ${s.join(' ')}`:null;
+  }).filter(Boolean).join('\n');
 
-Perfiles individuales:
-${perfiles}
+  return `════════════════════════════════════════════════════
+CEIP CAPITULACIONES DE SANTA FE — SANTA FE, GRANADA
+DATOS SOCIOMÉTRICOS — ${cls}º EP — ${sesLbl(session)} ${year}
+════════════════════════════════════════════════════
+Participación: ${responses.length}/${students.length} alumnos (${pct}%)
 
-Sé específico, usa nombres y ofrece recomendaciones prácticas y empáticas para el tutor y el equipo de orientación.`;
+ÍNDICES:
+  Cohesión ${(idx.IC*100).toFixed(1)}% ${semaforo(idx.IC*100,15,8)} (ref >15%)
+  Integración ${(idx.II*100).toFixed(0)}% ${semaforo(idx.II*100,70,50)} (ref >70%)
+  Rechazo ${(idx.IR*100).toFixed(0)}% ${idx.IR<=0.10?'✅ BIEN':idx.IR<=0.25?'⚠️ MODERADO':'🔴 ATENCIÓN'} (ref <10%)
+  Clima emocional ${a.clima.toFixed(2)}/5 ${semaforo(a.clima,4,3)}
+  Pares mutuos: ${idx.mutualPairs} · Alumnos integrados: ${idx.integrated}/${students.length}
+
+ROLES:
+  🌟 Líderes(${R('lider').length}): ${names(R('lider'))}
+  💙 Aislados(${R('aislado').length}): ${names(R('aislado'))}
+  ⚠️ Posib.acosador(${R('acosador').length}): ${names(R('acosador'))}
+  🆘 Posib.acosado(${R('acosado').length}): ${names(R('acosado'))}
+  🚨 Sit.riesgo(${R('enriesgo').length}): ${names(R('enriesgo'))}
+  🔶 Conflictivos(${R('conflicto').length}): ${names(R('conflicto'))}
+  ✅ Normal: ${R('normal').length} alumnos
+
+PERFILES EXCEPCIONALES:
+${perfiles||'  — Sin casos excepcionales.'}
+
+${tdLines?`OBSERVACIONES DOCENTE (anónimas):\n${tdLines}\n`:''}
+RECURSOS DEL CENTRO:
+  · Equipo de Orientación
+  · Grupo de Prácticos/as de Integración Social: trabajan convivencia directamente con el alumnado (individual, pequeño grupo, actividades cooperativas)
+  · Equipo directivo
+  · Familias
+════════════════════════════════════════════════════
+INSTRUCCIONES:
+
+Eres el orientador/a del CEIP Capitulaciones de Santa Fe (Santa Fe, Granada).
+Con los datos anteriores, redacta DOS documentos separados y claramente diferenciados:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DOCUMENTO 1 — INFORME COMPLETO (máx. 3 páginas A4)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Encabezado:
+  CEIP CAPITULACIONES DE SANTA FE · SANTA FE, GRANADA
+  INFORME DE CONVIVENCIA — ${cls}º EP · ${sesLbl(session).toUpperCase()} ${year}
+  Equipo de Orientación · Documento confidencial
+
+Secciones (breves, directas, sin relleno):
+1. DIAGNÓSTICO (½ pág): interpretación de índices, gravedad general, comparativa con referencias.
+2. ANÁLISIS SOCIOMÉTRICO (½ pág): estructura del grupo, subgrupos, líderes, vínculos de rechazo.
+3. PERFILES INDIVIDUALES (1 pág): un párrafo por cada caso excepcional. Para cada uno: descripción, factores de riesgo, nivel de urgencia (ALTA/MEDIA/BAJA).
+4. PLAN DE INTERVENCIÓN (1 pág): medidas concretas con responsable y plazo para cada caso. Incluir al Grupo de Prácticos/as de Integración Social como recurso activo: especifica qué pueden trabajar con cada alumno/a (habilidades sociales, actividades cooperativas, trabajo individual). Añadir seguimiento y criterios para activar protocolo de acoso (Junta de Andalucía).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DOCUMENTO 2 — RESUMEN PARA LA TUTORA (máx. 1 página A4)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Encabezado:
+  CEIP CAPITULACIONES DE SANTA FE · Resumen de convivencia para la tutora · ${cls}º EP · ${sesLbl(session)} ${year}
+
+Formato visual, lenguaje directo, sin tecnicismos:
+
+[BLOQUE 1 — INDICADORES DEL CLIMA]
+Cuatro indicadores con valoración clara: Cohesión / Integración / Rechazo / Clima emocional
+Valor numérico + ✅/⚠️/🔴 + una línea de interpretación
+
+[BLOQUE 2 — LO URGENTE / LO QUE VA BIEN]
+Máx. 2 frases cada uno. Accionable e inmediato.
+
+[BLOQUE 3 — ALUMNOS QUE NECESITAN TU ATENCIÓN]
+Solo los casos excepcionales. Para cada uno: nombre anon. + rol + 3-4 líneas de descripción humana (no técnica) + una ACCIÓN concreta en negrita.
+
+[BLOQUE 4 — PLAN DE ACCIÓN]
+Línea de tiempo: HOY / ESTA SEMANA / SEM.1-2 / SEM.2-4 / FIN DE CURSO
+Cada acción: quién la hace (tutora / orientación / prácticos/as de Integración Social / familia).
+
+[BLOQUE 5 — APÓYATE EN ESTOS RECURSOS]
+Líderes positivos + alumnos integrados + Grupo de Prácticos/as de Integración Social + clima positivo como base.
+
+Tono: empático, profesional, práctico. La tutora debe poder leerlo en 5 minutos y saber exactamente qué hacer.
+════════════════════════════════════════════════════`;
 }
 
 async function copyPrompt(cls,session){
