@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root{
@@ -717,12 +718,17 @@ details summary::-webkit-details-marker{display:none;}
     </button>
     <img id="loginLogoImg" class="login-logo" src="" alt="">
     <h2>Panel Docente</h2>
-    <p>Introduce la contraseña para ver los resultados</p>
+    <p>Introduce tu usuario IdEA de Séneca</p>
     <div class="field" style="text-align:left;">
-      <label>Contraseña</label>
-      <input type="password" id="adminPass" placeholder="Introduce la contraseña" onkeydown="if(event.key==='Enter')doLogin()">
+      <label for="adminPass">Usuario IdEA</label>
+      <input type="password" id="adminPass" placeholder="Tu usuario de Séneca"
+             autocomplete="off" autocapitalize="off" spellcheck="false"
+             onkeydown="if(event.key==='Enter')doLogin()">
+      <div style="font-size:.72rem;color:var(--text-muted);margin-top:.4rem;line-height:1.5;">
+        Es tu <strong>usuario</strong> de Séneca, no la contraseña.
+      </div>
     </div>
-    <button class="btn-primary" onclick="doLogin()">Acceder al panel →</button>
+    <button class="btn-primary" id="btnLoginDocente" onclick="doLogin()">Acceder al panel →</button>
   </div>
   </div>
 </div>
@@ -793,24 +799,33 @@ details summary::-webkit-details-marker{display:none;}
     <h3>🔧 Configuración</h3>
     <p>Ajusta la contraseña y los datos del centro.</p>
     <div class="modal-tabs">
-      <button class="modal-tab active" onclick="switchTab('password',this)">🔐 Contraseña</button>
+      <button class="modal-tab active" onclick="switchTab('password',this)">👥 Docentes</button>
       <button class="modal-tab" onclick="switchTab('school',this)">🏫 Centro</button>
       <button class="modal-tab" onclick="switchTab('firebase',this)">🔥 Firebase</button>
     </div>
     <div id="tab-password">
-      <div style="background:var(--primary-light);border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.8rem;color:var(--primary);font-weight:700;display:flex;align-items:center;gap:.5rem;">
-        🔥 Las contraseñas se guardan cifradas en Firebase, nunca en el código ni en el dispositivo.
+      <div style="background:var(--primary-light);border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.78rem;color:var(--primary);font-weight:600;line-height:1.55;">
+        Cada docente entra con su <strong>usuario IdEA</strong> de S&eacute;neca. Al dar de alta se crea
+        la cuenta y se concede el acceso en un solo paso; al dar de baja lo pierde de inmediato.
       </div>
-      <p style="font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:.75rem;">Contraseña de Dirección</p>
-      <div class="field"><label>Contraseña actual (dirección o superusuario)</label><input type="password" id="cfg-old" placeholder="••••••••"></div>
-      <div class="field"><label>Nueva contraseña de dirección</label><input type="password" id="cfg-new" placeholder="Mínimo 6 caracteres"></div>
-      <div class="field"><label>Confirmar nueva</label><input type="password" id="cfg-conf" placeholder="Repite la contraseña"></div>
+
+      <p style="font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:.75rem;">Dar de alta</p>
+      <div class="field"><label for="cv-np-nombre">Nombre y apellidos</label>
+        <input type="text" id="cv-np-nombre" placeholder="Apellidos, Nombre" autocomplete="off"></div>
+      <div class="field"><label for="cv-np-idea">Usuario IdEA</label>
+        <input type="text" id="cv-np-idea" placeholder="Ej. abcdef123" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+      <div class="field"><label for="cv-np-rol">Perfil</label>
+        <select id="cv-np-rol" style="width:100%;padding:.85rem 1rem;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:.95rem;outline:none;background:#fff;">
+          <option value="docente">Docente &mdash; ve resultados y pasa cuestionarios</option>
+          <option value="super">Superusuario &mdash; adem&aacute;s gestiona docentes</option>
+        </select></div>
+      <button class="btn-sm" id="cv-np-btn" style="background:var(--primary);color:#fff;" onclick="cvAltaDocente()">Dar de alta</button>
+
       <hr style="border:none;border-top:1.5px solid var(--border);margin:1.25rem 0;">
-      <p style="font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:.75rem;">Contraseña de Alumnado</p>
-      <div class="field"><label>Nueva contraseña para alumnos</label><input type="password" id="cfg-student-new" placeholder="Mínimo 4 caracteres (dejar vacío = sin cambio)"></div>
-      <hr style="border:none;border-top:1.5px solid var(--border);margin:1.25rem 0;">
-      <p style="font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:.75rem;">Contraseña de Superusuario</p>
-      <div class="field"><label>Nueva contraseña superusuario</label><input type="password" id="cfg-super-new" placeholder="Mínimo 6 caracteres (dejar vacío = sin cambio)"></div>
+      <p style="font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:.75rem;">
+        Con acceso ahora mismo (<span id="cv-np-total">0</span>)
+      </p>
+      <div id="cv-np-lista" style="font-size:.85rem;"></div>
     </div>
     <div id="tab-school" style="display:none;">
       <div class="field"><label>Nombre del centro</label><input type="text" id="cfg-school" placeholder="CEIP Ejemplo"></div>
@@ -839,10 +854,11 @@ details summary::-webkit-details-marker{display:none;}
   <div class="modal" style="max-width:380px;text-align:center;">
     <div style="font-size:3rem;margin-bottom:.75rem;">🧒</div>
     <h3 style="margin-bottom:.5rem;">Acceso Alumnado</h3>
-    <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.25rem;">Introduce la contraseña para responder el cuestionario</p>
+    <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.25rem;">El cuestionario se pasa en el dispositivo del maestro. Introduce tu usuario IdEA para empezar.</p>
     <div class="field" style="text-align:left;">
-      <label>Contraseña</label>
-      <input type="password" id="studentPwdInput" placeholder="••••••••"
+      <label for="studentPwdInput">Usuario IdEA del maestro</label>
+      <input type="password" id="studentPwdInput" placeholder="Usuario de Séneca"
+        autocomplete="off" autocapitalize="off" spellcheck="false"
         style="width:100%;padding:.85rem 1rem;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:.95rem;outline:none;"
         onkeydown="if(event.key==='Enter')doStudentLogin()">
     </div>
@@ -886,16 +902,16 @@ let db = null, fbOk = false;
 
 function initFB() {
   try {
-    if(typeof firebase==='undefined') { console.warn('Firebase SDK no disponible'); loadAuthHashes(); return; }
+    if(typeof firebase==='undefined') { console.warn('Firebase SDK no disponible'); return; }
     if(!firebase.apps.length) firebase.initializeApp(FB_CFG);
     db = firebase.firestore();
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
     fbOk = true;
     console.log('✅ Firebase OK:', FB_CFG.projectId);
   } catch(e) {
     console.error('Firebase error:', e.message);
     fbOk = false;
   }
-  loadAuthHashes();
 }
 
 // ════════════════════════════════════════
@@ -909,65 +925,69 @@ function setLogos(){
 }
 
 // ════════════════════════════════════════
-// SISTEMA DE AUTENTICACIÓN — contraseñas en Firestore
-// Documento: cv_config/auth  { superHash, adminHash, studentHash }
-// Los hashes son SHA-256. NUNCA se guardan contraseñas en texto plano
-// ni en el código fuente ni en localStorage.
-// En modo local (sin Firebase) se usa un fallback mínimo de emergencia.
+// ACCESO — Firebase Authentication
+// ────────────────────────────────────────
+// Los datos de esta app son respuestas sociométricas del alumnado, así que
+// el acceso se verifica de verdad contra Firebase, no en el navegador.
+//
+// Cada docente tiene una cuenta  <idea>@capitulaciones.local  cuya contraseña
+// es su usuario IdEA de Séneca. El listado vive en la colección cv_acceso,
+// indexada por uid, y es lo que las reglas de Firestore consultan.
+//
+// El cuestionario del alumnado se pasa en el dispositivo del maestro, que ya
+// está autenticado: por eso no hace falta ninguna contraseña de alumnado.
 // ════════════════════════════════════════
-async function sha256(str){
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
+const CV_DOMINIO = '@capitulaciones.local';
 
-// Hashes cargados desde Firestore al iniciar
-let _hashes = { superHash:'', adminHash:'', studentHash:'' };
-let _authReady = false;
+let _fichaAcceso = null;   // { nombre, rol } de la persona que ha entrado
+let _authReady   = false;
 
-async function loadAuthHashes(){
-  // Fallback por defecto (usado si Firebase no está disponible)
-  const sh = await sha256('tigre');
-  const ah = await sha256('convive2024');
-  _hashes = { superHash:sh, adminHash:ah, studentHash:ah };
+function cvAuth(){ return firebase.auth(); }
+function cvUid(){ const u = firebase.auth().currentUser; return u ? u.uid : null; }
+function cvSesionActiva(){ return !!cvUid() && !!_fichaAcceso; }
 
-  if(!fbOk){ _authReady=true; return; }
+// Lee la ficha de acceso de quien ha iniciado sesión
+async function cargarFichaAcceso(){
+  const uid = cvUid();
+  if(!uid || !fbOk){ _fichaAcceso = null; return null; }
   try{
-    const doc = await db.collection('cv_config').doc('auth').get();
-    if(doc.exists){
-      const d = doc.data();
-      _hashes.superHash   = d.superHash   || sh;
-      _hashes.adminHash   = d.adminHash   || ah;
-      _hashes.studentHash = d.studentHash || _hashes.adminHash;
-    } else {
-      // Primera vez: crear documento con contraseñas iniciales
-      _hashes = { superHash:sh, adminHash:ah, studentHash:ah };
-      await db.collection('cv_config').doc('auth').set(_hashes);
-      console.log('✅ Documento auth creado en Firestore');
-    }
+    const doc = await db.collection('cv_acceso').doc(uid).get();
+    _fichaAcceso = doc.exists ? doc.data() : null;
   } catch(e){
-    console.warn('No se pudo leer auth de Firestore, usando fallback:', e.message);
+    console.warn('No se pudo leer cv_acceso:', e.message);
+    _fichaAcceso = null;
   }
-  _authReady = true;
+  return _fichaAcceso;
 }
 
-async function checkSuper(pwd)  { return !!_hashes.superHash   && (await sha256(pwd))===_hashes.superHash; }
-async function checkAdmin(pwd)  { return !!_hashes.adminHash   && (await sha256(pwd))===_hashes.adminHash; }
-async function checkStudent(pwd){
-  const h = await sha256(pwd);
-  return (!!_hashes.studentHash && h===_hashes.studentHash)
-      || (!!_hashes.adminHash   && h===_hashes.adminHash)
-      || (!!_hashes.superHash   && h===_hashes.superHash);
+async function cvEntrar(idea){
+  const correo = String(idea||'').trim().toLowerCase() + CV_DOMINIO;
+  const cred = await cvAuth().signInWithEmailAndPassword(correo, String(idea||'').trim().toLowerCase());
+  const ficha = await cargarFichaAcceso();
+  if(!ficha){
+    await cvAuth().signOut().catch(()=>{});
+    const err = new Error('sin-acceso'); err.code = 'cv/sin-acceso'; throw err;
+  }
+  return { uid: cred.user.uid, ficha: ficha };
 }
 
-async function saveAuthHashes(newAdminPwd, newSuperPwd, newStudentPwd){
-  // Solo guarda los campos que reciben valor nuevo
-  const update = {};
-  if(newAdminPwd)  { update.adminHash   = await sha256(newAdminPwd);   _hashes.adminHash   = update.adminHash; }
-  if(newSuperPwd)  { update.superHash   = await sha256(newSuperPwd);   _hashes.superHash   = update.superHash; }
-  if(newStudentPwd){ update.studentHash = await sha256(newStudentPwd); _hashes.studentHash = update.studentHash; }
-  if(!Object.keys(update).length) return;
-  if(fbOk){ await db.collection('cv_config').doc('auth').set(update,{merge:true}); }
+async function cvSalir(){
+  try{ await cvAuth().signOut(); } catch(e){}
+  _fichaAcceso = null;
+  isSuperUser = false;
+  currentRole = 'admin';
 }
+
+function cvMensajeError(e){
+  const c = (e && e.code) || '';
+  if(c === 'cv/sin-acceso')                 return 'Tu cuenta no tiene acceso concedido. Habla con la dirección del centro.';
+  if(c === 'auth/network-request-failed')   return 'Sin conexión. Inténtalo de nuevo.';
+  if(c === 'auth/too-many-requests')        return 'Demasiados intentos. Espera unos minutos.';
+  if(c === 'auth/user-not-found')           return 'Esa cuenta no está dada de alta.';
+  if(c === 'auth/operation-not-allowed')    return 'Habilita Correo/contraseña en la consola de Firebase.';
+  return 'El usuario IdEA no es correcto.';
+}
+
 // ─────────────────────────────────────────────────────────────
 let isSuperUser = false;
 // 'super' | 'admin' | 'student'  — rol activo en el dashboard
@@ -1029,12 +1049,27 @@ function goSetup(){
 
 function closeStudentPwd(){document.getElementById('studentPwdModal').classList.add('hidden');}
 async function doStudentLogin(){
-  const pass=document.getElementById('studentPwdInput').value;
-  if(await checkStudent(pass)){
-    studentUnlocked=true;
+  // El cuestionario se pasa en el dispositivo del maestro. Si ya hay sesión,
+  // se entra directo; si no, se pide el IdEA del maestro que lo supervisa.
+  if(cvSesionActiva()){ studentUnlocked=true; closeStudentPwd(); _goSetupDirect(); return; }
+
+  const inp  = document.getElementById('studentPwdInput');
+  const idea = (inp.value||'').trim().toLowerCase();
+  if(!idea){ showToast('El maestro debe escribir su usuario IdEA','error'); return; }
+  if(!fbOk){ showToast('Sin conexión con Firebase','error'); return; }
+
+  try{
+    const r = await cvEntrar(idea);
+    inp.value='';
+    isSuperUser = (r.ficha.rol === 'super');
+    currentRole = 'student';
+    studentUnlocked = true;
     closeStudentPwd();
     _goSetupDirect();
-  } else { showToast('❌ Contraseña incorrecta','error'); }
+  } catch(e){
+    showToast('❌ '+cvMensajeError(e),'error');
+    inp.value='';
+  }
 }
 
 
@@ -1168,21 +1203,31 @@ async function submitSurvey(){
 // LOGIN
 // ════════════════════════════════════════
 async function doLogin(){
-  const pass=document.getElementById('adminPass').value;
-  if(await checkSuper(pass)){
-    isSuperUser=true; currentRole='super';
-    document.getElementById('adminPass').value='';
+  const inp  = document.getElementById('adminPass');
+  const idea = (inp.value||'').trim().toLowerCase();
+  if(!idea){ showToast('Escribe tu usuario IdEA','error'); return; }
+  if(!fbOk){ showToast('Sin conexión con Firebase','error'); return; }
+
+  const btn = document.getElementById('btnLoginDocente');
+  if(btn){ btn.disabled=true; btn.textContent='Comprobando…'; }
+
+  try{
+    const r = await cvEntrar(idea);
+    inp.value='';
+    isSuperUser = (r.ficha.rol === 'super');
+    currentRole = isSuperUser ? 'super' : 'admin';
+    studentUnlocked = true;   // ya está identificado: puede pasar cuestionarios
     showScreen('dashboard');
     updateRoleBadge();
     loadDash();
-    setTimeout(()=>showToast('🔐 Acceso como superusuario','success'),300);
-  } else if(await checkAdmin(pass)){
-    isSuperUser=false; currentRole='admin';
-    document.getElementById('adminPass').value='';
-    showScreen('dashboard');
-    updateRoleBadge();
-    loadDash();
-  } else { showToast('❌ Contraseña incorrecta','error'); }
+    setTimeout(()=>showToast('🔐 Sesión iniciada: '+(r.ficha.nombre||'').split(',')[0],'success'),300);
+  } catch(e){
+    console.warn('Acceso rechazado:', e && e.code);
+    showToast('❌ '+cvMensajeError(e),'error');
+    inp.value='';
+  } finally {
+    if(btn){ btn.disabled=false; btn.textContent='Acceder al panel →'; }
+  }
 }
 
 // ════════════════════════════════════════
@@ -2532,6 +2577,7 @@ function showConfig(){
   document.getElementById('cfg-year').value=YEAR;
   document.getElementById('cfg-apiKey').value=FB_CFG.apiKey;
   document.getElementById('cfg-projectId').value=FB_CFG.projectId;
+  cvRefrescarDocentes();
   document.getElementById('cfg-authDomain').value=FB_CFG.authDomain;
   document.getElementById('cfg-appId').value=FB_CFG.appId;
   const fbStatus=document.getElementById('fbStatus');
@@ -2548,29 +2594,8 @@ function switchTab(tab,btn){
 
 async function saveConfig(){
   if(!isSuperUser){showToast('🔒 Solo el superusuario puede guardar la configuración','warning');return;}
-  const oldP   = document.getElementById('cfg-old').value;
-  const newP   = document.getElementById('cfg-new').value;
-  const confP  = document.getElementById('cfg-conf').value;
-  const newSup = document.getElementById('cfg-super-new').value;
-  const newStu = document.getElementById('cfg-student-new').value;
-
-  // Cambio contraseña de dirección
-  if(newP||confP||oldP){
-    if(!(await checkAdmin(oldP)||await checkSuper(oldP))){showToast('❌ Contraseña actual incorrecta','error');return;}
-    if(newP!==confP){showToast('❌ Las contraseñas no coinciden','error');return;}
-    if(newP.length<6){showToast('❌ Mínimo 6 caracteres','error');return;}
-    await saveAuthHashes(newP, null, null);
-  }
-  // Cambio contraseña superusuario
-  if(newSup){
-    if(newSup.length<6){showToast('❌ Contraseña superusuario: mínimo 6 caracteres','error');return;}
-    await saveAuthHashes(null, newSup, null);
-  }
-  // Cambio contraseña alumnado
-  if(newStu){
-    if(newStu.length<4){showToast('❌ Contraseña alumnado: mínimo 4 caracteres','error');return;}
-    await saveAuthHashes(null, null, newStu);
-  }
+  // Las contraseñas ya no se gestionan aquí: cada docente entra con su IdEA
+  // y las cuentas viven en Firebase Authentication.
 
   SCHOOL=document.getElementById('cfg-school').value||SCHOOL;
   YEAR=document.getElementById('cfg-year').value||YEAR;
@@ -2648,18 +2673,13 @@ function showRoleSwitch(){
 function closeRoleSwitch(){document.getElementById('roleSwitchModal').classList.add('hidden');}
 
 async function doRoleSwitch(targetRole){
-  const hierarchy={super:3,admin:2,student:1};
-  if(hierarchy[targetRole]<=hierarchy[currentRole]){
-    _applyRole(targetRole); return;
+  // El rol ya no se negocia con contraseñas: viene de la ficha de acceso.
+  if(targetRole==='super' && !(_fichaAcceso && _fichaAcceso.rol==='super')){
+    showToast('🔒 Tu cuenta no es de superusuario','warning');
+    return;
   }
-  const inp=document.getElementById('rsPwd_'+targetRole);
-  if(!inp){showToast('Error interno','error');return;}
-  const pwd=inp.value;
-  let ok=false;
-  if(targetRole==='super') ok=await checkSuper(pwd);
-  else if(targetRole==='admin') ok=await checkAdmin(pwd)||await checkSuper(pwd);
-  if(ok){ _applyRole(targetRole); }
-  else { showToast('❌ Contraseña incorrecta','error'); inp.value=''; inp.focus(); }
+  if(!cvSesionActiva()){ showToast('🔒 Inicia sesión primero','warning'); return; }
+  _applyRole(targetRole);
 }
 
 function _applyRole(role){
@@ -2680,9 +2700,135 @@ function _applyRole(role){
 // ════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════
+// ════════════════════════════════════════
+// PANEL DE DOCENTES (solo superusuario)
+// ════════════════════════════════════════
+// Crear una cuenta con la instancia principal cerraria la sesion de quien la
+// crea, asi que se usa una instancia secundaria de Firebase.
+let _cvAppAlta = null;
+function cvAuthAlta(){
+  if(!_cvAppAlta) _cvAppAlta = firebase.initializeApp(FB_CFG, 'cvAlta');
+  return _cvAppAlta.auth();
+}
+
+async function cvAsegurarCuenta(idea){
+  const correo = idea + CV_DOMINIO;
+  const a = cvAuthAlta();
+  let uid;
+  try{
+    const cred = await a.createUserWithEmailAndPassword(correo, idea);
+    uid = cred.user.uid;
+  } catch(e){
+    if(e.code === 'auth/email-already-in-use'){
+      const cred = await a.signInWithEmailAndPassword(correo, idea);
+      uid = cred.user.uid;
+    } else { throw e; }
+  }
+  try{ await a.signOut(); } catch(e){}
+  return uid;
+}
+
+async function cvRefrescarDocentes(){
+  const cont = document.getElementById('cv-np-lista');
+  const tot  = document.getElementById('cv-np-total');
+  if(!cont) return;
+  cont.innerHTML = '<div style="color:var(--text-muted);padding:.5rem 0;">Cargando…</div>';
+  try{
+    const snap = await db.collection('cv_acceso').get();
+    const lista = [];
+    snap.forEach(d=>{ const v=d.data()||{}; lista.push({uid:d.id, nombre:v.nombre||'(sin nombre)', rol:v.rol||'docente'}); });
+    lista.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+    if(tot) tot.textContent = lista.length;
+
+    if(!lista.length){ cont.innerHTML = '<div style="color:var(--text-muted);padding:.5rem 0;">Todavía no hay nadie dado de alta.</div>'; return; }
+
+    const yo = cvUid();
+    cont.innerHTML = lista.map(p=>{
+      const esYo = p.uid === yo;
+      const badge = p.rol==='super'
+        ? '<span style="background:#EDE9FE;color:#5B21B6;padding:2px 8px;border-radius:20px;font-size:.65rem;font-weight:800;">SUPER</span>' : '';
+      const acciones = esYo
+        ? '<span style="font-size:.7rem;color:var(--text-muted);font-weight:700;">tu cuenta</span>'
+        : '<button class="btn-sm" style="background:var(--bg);color:var(--text-secondary);border:1.5px solid var(--border);font-size:.7rem;padding:3px 9px;" onclick="cvCambiarRol(\''+p.uid+'\')">'
+          + (p.rol==='super'?'Quitar super':'Hacer super') + '</button>'
+          + ' <button class="btn-sm" style="background:#FEE2E2;color:#B91C1C;font-size:.7rem;padding:3px 9px;" onclick="cvBajaDocente(\''+p.uid+'\')">Baja</button>';
+      return '<div style="display:flex;align-items:center;gap:.5rem;padding:.55rem .1rem;border-bottom:1px solid var(--border);flex-wrap:wrap;">'
+           + '<span style="flex:1;min-width:150px;">'+p.nombre+' '+badge+'</span>'+acciones+'</div>';
+    }).join('');
+  } catch(e){
+    cont.innerHTML = '<div style="color:#B91C1C;padding:.5rem 0;">No se pudo cargar: '+(e.code||e.message)+'</div>';
+  }
+}
+
+async function cvAltaDocente(){
+  if(!isSuperUser){ showToast('🔒 Solo el superusuario puede dar de alta','warning'); return; }
+  const nombre = (document.getElementById('cv-np-nombre').value||'').trim();
+  const idea   = (document.getElementById('cv-np-idea').value||'').trim().toLowerCase();
+  const rol    = document.getElementById('cv-np-rol').value;
+  const btn    = document.getElementById('cv-np-btn');
+
+  if(!nombre){ showToast('Escribe el nombre','error'); return; }
+  if(!idea){ showToast('Escribe el usuario IdEA','error'); return; }
+  if(idea.length<6){ showToast('El IdEA debe tener al menos 6 caracteres','error'); return; }
+  if(!/^[a-z0-9._-]+$/.test(idea)){ showToast('El IdEA tiene caracteres no válidos','error'); return; }
+
+  btn.disabled=true; btn.textContent='Dando de alta…';
+  try{
+    const uid = await cvAsegurarCuenta(idea);
+    await db.collection('cv_acceso').doc(uid).set({ nombre:nombre, rol:rol, creado:new Date().toISOString() });
+    document.getElementById('cv-np-nombre').value='';
+    document.getElementById('cv-np-idea').value='';
+    document.getElementById('cv-np-rol').value='docente';
+    showToast('✅ '+nombre+' ya tiene acceso','success');
+    await cvRefrescarDocentes();
+  } catch(e){
+    console.warn('Alta fallida:', e.code, e.message);
+    showToast('❌ '+cvMensajeError(e),'error');
+  } finally {
+    btn.disabled=false; btn.textContent='Dar de alta';
+  }
+}
+
+async function cvBajaDocente(uid){
+  if(!isSuperUser){ showToast('🔒 Solo el superusuario puede dar de baja','warning'); return; }
+  if(uid === cvUid()){ showToast('No puedes darte de baja a ti mismo','error'); return; }
+  if(!confirm('¿Retirar el acceso a esta persona?\n\nDejará de poder entrar de inmediato.')) return;
+  try{
+    await db.collection('cv_acceso').doc(uid).delete();
+    showToast('Acceso retirado','success');
+    await cvRefrescarDocentes();
+  } catch(e){ showToast('❌ No se pudo: '+(e.code||e.message),'error'); }
+}
+
+async function cvCambiarRol(uid){
+  if(!isSuperUser){ showToast('🔒 Solo el superusuario','warning'); return; }
+  try{
+    const doc = await db.collection('cv_acceso').doc(uid).get();
+    const actual = (doc.data()||{}).rol || 'docente';
+    const nuevo = actual==='super' ? 'docente' : 'super';
+    await db.collection('cv_acceso').doc(uid).update({ rol:nuevo });
+    showToast('Perfil cambiado a '+nuevo,'success');
+    await cvRefrescarDocentes();
+  } catch(e){ showToast('❌ No se pudo: '+(e.code||e.message),'error'); }
+}
+
 window.addEventListener('DOMContentLoaded',()=>{
   initFB();
   setLogos();
+
+  // Si ya hay sesión de Firebase en este dispositivo, se recupera el rol
+  // sin volver a pedir el IdEA.
+  if(fbOk){
+    firebase.auth().onAuthStateChanged(async (u)=>{
+      if(!u){ _fichaAcceso=null; isSuperUser=false; currentRole='admin'; studentUnlocked=false; return; }
+      const ficha = await cargarFichaAcceso();
+      if(!ficha){ await cvSalir(); return; }
+      isSuperUser = (ficha.rol === 'super');
+      currentRole = isSuperUser ? 'super' : 'admin';
+      studentUnlocked = true;
+      if(typeof updateRoleBadge==='function') updateRoleBadge();
+    });
+  }
   document.querySelector('.home-school').innerHTML=`<svg class="school-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>${SCHOOL}`;
 });
 </script>
