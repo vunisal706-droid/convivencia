@@ -1118,7 +1118,7 @@ async function loadStudents(){
   try {
     let students=[];
     if(fbOk){
-      const doc=await db.collection('cv_clases').doc(cls).get();
+      const doc=await cvDocClase(cls).get();
       students=doc.exists?(doc.data().alumnos||[]):[];
     } else {
       students=JSON.parse(localStorage.getItem('cv_al_'+cls)||'[]');
@@ -1281,7 +1281,7 @@ async function loadCenterSummary(session, body){
       if(fbOk){
         const [rSnap,cDoc]=await Promise.all([
           db.collection('cv_respuestas').where('clase','==',cls).where('sesion','==',session).get(),
-          db.collection('cv_clases').doc(cls).get()
+          cvDocClase(cls).get()
         ]);
         responses=delCursoActivo(rSnap.docs.map(d=>d.data()));
         students=cDoc.exists?(cDoc.data().alumnos||[]):[];
@@ -1461,7 +1461,7 @@ async function loadDash(){
     if(fbOk){
       const [rSnap,cDoc]=await Promise.all([
         db.collection('cv_respuestas').where('clase','==',cls).where('sesion','==',session).get(),
-        db.collection('cv_clases').doc(cls).get()
+        cvDocClase(cls).get()
       ]);
       responses=delCursoActivo(rSnap.docs.map(d=>d.data()));
       students=cDoc.exists?(cDoc.data().alumnos||[]):[];
@@ -2433,7 +2433,7 @@ async function buildPrompt(cls,session){
   if(fbOk){
     const [rSnap,cDoc]=await Promise.all([
       db.collection('cv_respuestas').where('clase','==',cls).where('sesion','==',session).get(),
-      db.collection('cv_clases').doc(cls).get()
+      cvDocClase(cls).get()
     ]);
     responses=dedupeResponses(delCursoActivo(rSnap.docs.map(d=>d.data())));
     students=cDoc.exists?(cDoc.data().alumnos||[]):[];
@@ -2566,11 +2566,14 @@ function showManage(){document.getElementById('manageModal').classList.remove('h
 function closeManage(){document.getElementById('manageModal').classList.add('hidden');}
 
 async function loadManage(){
+  if(cvViendoArchivo()){
+    showToast('📁 Estás viendo el curso '+YEAR+'. Cambia al curso en vigor para editar.','warning');
+  }
   const cls=document.getElementById('manageClass').value;
   const tags=document.getElementById('manageTags');
   tags.innerHTML='<span style="color:var(--text-muted);font-size:.85rem;font-weight:600">Cargando...</span>';
   try{
-    if(fbOk){const doc=await db.collection('cv_clases').doc(cls).get();manageList=doc.exists?(doc.data().alumnos||[]):[]; }
+    if(fbOk){const doc=await cvDocClase(cls).get();manageList=doc.exists?(doc.data().alumnos||[]):[]; }
     else{manageList=JSON.parse(localStorage.getItem('cv_al_'+cls)||'[]');}
   }catch(e){manageList=[];}
   renderManageTags();
@@ -2595,6 +2598,10 @@ function addStudent(){
 function removeStudent(i){manageList.splice(i,1);renderManageTags();}
 
 async function saveManage(){
+  if(cvViendoArchivo()){
+    showToast('🔒 No se editan listados de cursos pasados','error');
+    return;
+  }
   const cls=document.getElementById('manageClass').value;
   try{
     if(fbOk){await db.collection('cv_clases').doc(cls).set({alumnos:manageList});}
@@ -2743,6 +2750,21 @@ function _applyRole(role){
 // INIT
 // ════════════════════════════════════════
 // ════════════════════════════════════════
+// LISTADOS POR CURSO
+// ────────────────────────────────────────
+// El curso en vigor usa cv_clases (la lista viva que se edita en «Gestionar»).
+// Los cursos anteriores se leen de cv_clases_hist, una foto congelada que se
+// guarda al promocionar. Sin esto, al subir de curso se perdia la referencia
+// de quien habia en cada clase y los resultados antiguos quedaban huerfanos.
+// ════════════════════════════════════════
+function cvDocClase(cls){
+  return (YEAR === CURSO_CENTRO)
+    ? db.collection('cv_clases').doc(cls)
+    : db.collection('cv_clases_hist').doc(YEAR + '_' + cls);
+}
+function cvViendoArchivo(){ return YEAR !== CURSO_CENTRO; }
+
+// ════════════════════════════════════════
 // SELECTOR DE CURSO EN EL PANEL
 // ────────────────────────────────────────
 // Permite consultar cursos anteriores sin cambiar nada: solo afecta a lo
@@ -2869,6 +2891,12 @@ async function cvPromocionar(){
   const btn = document.getElementById('cur-btn-ok');
   btn.disabled = true; btn.textContent = 'Aplicando…';
   try{
+    // Antes de mover nada, congelar la foto del curso que termina.
+    // Es lo que permite consultar despues los resultados de ese curso.
+    for(const c of ['1','2','3','4','5','6']){
+      await db.collection('cv_clases_hist').doc(YEAR + '_' + c)
+        .set({ curso: YEAR, clase: c, alumnos: (_planPromocion.clases[c]||[]) });
+    }
     for(const f of _planPromocion.filas){
       await db.collection('cv_clases').doc(f.destino).set({ alumnos: f.alumnos });
     }
