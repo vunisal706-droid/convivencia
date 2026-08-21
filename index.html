@@ -801,6 +801,7 @@ details summary::-webkit-details-marker{display:none;}
     <div class="modal-tabs">
       <button class="modal-tab active" onclick="switchTab('password',this)">👥 Docentes</button>
       <button class="modal-tab" onclick="switchTab('school',this)">🏫 Centro</button>
+      <button class="modal-tab" onclick="switchTab('curso',this)">🎓 Cambio de curso</button>
       <button class="modal-tab" onclick="switchTab('firebase',this)">🔥 Firebase</button>
     </div>
     <div id="tab-password">
@@ -826,6 +827,27 @@ details summary::-webkit-details-marker{display:none;}
         Con acceso ahora mismo (<span id="cv-np-total">0</span>)
       </p>
       <div id="cv-np-lista" style="font-size:.85rem;"></div>
+    </div>
+    <div id="tab-curso" style="display:none;">
+      <div style="background:var(--primary-light);border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.78rem;color:var(--primary);font-weight:600;line-height:1.55;">
+        Sube a todo el alumnado un curso de golpe. 6&ordm; sale del centro y 1&ordm; queda vac&iacute;o
+        para que a&ntilde;adas a los que llegan. Los resultados del curso anterior se conservan.
+      </div>
+
+      <div class="field"><label for="cur-nuevo">Nuevo curso acad&eacute;mico</label>
+        <input type="text" id="cur-nuevo" placeholder="2026-2027"></div>
+
+      <button class="btn-sm" id="cur-btn-prev" style="background:var(--bg);color:var(--text-secondary);border:1.5px solid var(--border);" onclick="cvPreverPromocion()">Ver qu&eacute; va a pasar</button>
+
+      <div id="cur-preview" style="margin-top:1rem;font-size:.85rem;"></div>
+
+      <div id="cur-confirm" style="display:none;margin-top:1rem;">
+        <div style="background:#FEF3C7;border-left:4px solid #D97706;border-radius:8px;padding:.8rem 1rem;font-size:.8rem;color:#78350F;line-height:1.6;margin-bottom:.75rem;">
+          <strong>Esto no se puede deshacer.</strong> Antes de continuar, exporta los PDF del curso
+          que termina si los necesitas.
+        </div>
+        <button class="btn-sm" id="cur-btn-ok" style="background:#15803D;color:#fff;" onclick="cvPromocionar()">Confirmar cambio de curso</button>
+      </div>
     </div>
     <div id="tab-school" style="display:none;">
       <div class="field"><label>Nombre del centro</label><input type="text" id="cfg-school" placeholder="CEIP Ejemplo"></div>
@@ -994,6 +1016,12 @@ let isSuperUser = false;
 let currentRole = 'admin';
 let SCHOOL    = localStorage.getItem('cv_school')||'CEIP Capitulaciones';
 let YEAR      = localStorage.getItem('cv_year')||'2025-2026';
+
+// Curso al que pertenece cada respuesta. Antes no se guardaba, asi que las
+// respuestas anteriores se consideran del curso indicado en CURSO_HISTORICO.
+const CURSO_HISTORICO = '2025-2026';
+function cursoDe(r){ return (r && r.curso) ? r.curso : CURSO_HISTORICO; }
+function delCursoActivo(lista){ return (lista||[]).filter(r=>cursoDe(r)===YEAR); }
 
 // ════════════════════════════════════════
 // PREGUNTAS
@@ -1178,7 +1206,7 @@ async function nextQ(){
 
 async function submitSurvey(){
   const session=document.getElementById('sessionSelect').value;
-  const data={alumno:curStudent,clase:curClass,sesion:session,timestamp:new Date().toISOString(),respuestas:answers};
+  const data={alumno:curStudent,clase:curClass,sesion:session,curso:YEAR,timestamp:new Date().toISOString(),respuestas:answers};
   try {
     if(fbOk){
       await db.collection('cv_respuestas').add(data);
@@ -1246,11 +1274,11 @@ async function loadCenterSummary(session, body){
           db.collection('cv_respuestas').where('clase','==',cls).where('sesion','==',session).get(),
           db.collection('cv_clases').doc(cls).get()
         ]);
-        responses=rSnap.docs.map(d=>d.data());
+        responses=delCursoActivo(rSnap.docs.map(d=>d.data()));
         students=cDoc.exists?(cDoc.data().alumnos||[]):[];
       } else {
         const all=JSON.parse(localStorage.getItem('cv_resp')||'[]');
-        responses=all.filter(r=>r.clase===cls&&r.sesion===session);
+        responses=delCursoActivo(all.filter(r=>r.clase===cls&&r.sesion===session));
         students=JSON.parse(localStorage.getItem('cv_al_'+cls)||'[]');
       }
       if(students.length>0){
@@ -1426,7 +1454,7 @@ async function loadDash(){
         db.collection('cv_respuestas').where('clase','==',cls).where('sesion','==',session).get(),
         db.collection('cv_clases').doc(cls).get()
       ]);
-      responses=rSnap.docs.map(d=>d.data());
+      responses=delCursoActivo(rSnap.docs.map(d=>d.data()));
       students=cDoc.exists?(cDoc.data().alumnos||[]):[];
       // Leer observaciones docente por separado para que un error no bloquee todo
       try{
@@ -1435,7 +1463,7 @@ async function loadDash(){
       }catch(e){ console.warn('cv_docente sin permisos aún:',e.message); }
     } else {
       const all=JSON.parse(localStorage.getItem('cv_resp')||'[]');
-      responses=all.filter(r=>r.clase===cls&&r.sesion===session);
+      responses=delCursoActivo(all.filter(r=>r.clase===cls&&r.sesion===session));
       students=JSON.parse(localStorage.getItem('cv_al_'+cls)||'[]');
       teacherData=JSON.parse(localStorage.getItem('cv_td_'+cls+'_'+session)||'{}');
     }
@@ -2398,12 +2426,12 @@ async function buildPrompt(cls,session){
       db.collection('cv_respuestas').where('clase','==',cls).where('sesion','==',session).get(),
       db.collection('cv_clases').doc(cls).get()
     ]);
-    responses=dedupeResponses(rSnap.docs.map(d=>d.data()));
+    responses=dedupeResponses(delCursoActivo(rSnap.docs.map(d=>d.data())));
     students=cDoc.exists?(cDoc.data().alumnos||[]):[];
     try{const td=await db.collection('cv_docente').doc(cls+'_'+session).get();teacherData=td.exists?td.data()||{}:{};}catch(e){}
   } else {
     const all=JSON.parse(localStorage.getItem('cv_resp')||'[]');
-    responses=dedupeResponses(all.filter(r=>r.clase===cls&&r.sesion===session));
+    responses=dedupeResponses(delCursoActivo(all.filter(r=>r.clase===cls&&r.sesion===session)));
     students=JSON.parse(localStorage.getItem('cv_al_'+cls)||'[]');
     teacherData=JSON.parse(localStorage.getItem('cv_td_'+cls+'_'+session)||'{}');
   }
@@ -2577,6 +2605,11 @@ function showConfig(){
   document.getElementById('cfg-year').value=YEAR;
   document.getElementById('cfg-apiKey').value=FB_CFG.apiKey;
   document.getElementById('cfg-projectId').value=FB_CFG.projectId;
+  const cn=document.getElementById('cur-nuevo');
+  if(cn && !cn.value){
+    const m=String(YEAR).match(/^(\d{4})-(\d{4})$/);
+    cn.value = m ? (Number(m[1])+1)+'-'+(Number(m[2])+1) : '';
+  }
   cvRefrescarDocentes();
   document.getElementById('cfg-authDomain').value=FB_CFG.authDomain;
   document.getElementById('cfg-appId').value=FB_CFG.appId;
@@ -2589,7 +2622,7 @@ function closeConfig(){document.getElementById('configModal').classList.add('hid
 function switchTab(tab,btn){
   document.querySelectorAll('.modal-tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  ['password','school','firebase'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===tab?'block':'none';});
+  ['password','school','curso','firebase'].forEach(t=>{const el=document.getElementById('tab-'+t); if(el) el.style.display=t===tab?'block':'none';});
 }
 
 async function saveConfig(){
@@ -2700,6 +2733,104 @@ function _applyRole(role){
 // ════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════
+// ════════════════════════════════════════
+// CAMBIO DE CURSO — promocion del alumnado
+// ────────────────────────────────────────
+// 6º sale del centro, el resto sube un curso y 1º queda vacio.
+// Las respuestas de cursos anteriores llevan el campo `curso`, asi que
+// se conservan y dejan de mezclarse con las nuevas.
+// ════════════════════════════════════════
+let _planPromocion = null;
+
+async function cvLeerClases(){
+  const clases = {};
+  for(const c of ['1','2','3','4','5','6']){
+    try{
+      const doc = await db.collection('cv_clases').doc(c).get();
+      clases[c] = doc.exists ? (doc.data().alumnos||[]) : [];
+    } catch(e){ clases[c] = []; }
+  }
+  return clases;
+}
+
+async function cvPreverPromocion(){
+  if(!isSuperUser){ showToast('🔒 Solo el superusuario','warning'); return; }
+  const cont = document.getElementById('cur-preview');
+  const nuevo = (document.getElementById('cur-nuevo').value||'').trim();
+  if(!/^\d{4}-\d{4}$/.test(nuevo)){
+    showToast('Escribe el curso con el formato 2026-2027','error'); return;
+  }
+  if(nuevo === YEAR){
+    showToast('Ese es el curso actual. Escribe el siguiente.','error'); return;
+  }
+  cont.innerHTML = '<div style="color:var(--text-muted)">Leyendo clases…</div>';
+
+  try{
+    const clases = await cvLeerClases();
+    const salen = clases['6'] || [];
+    const filas = [];
+    for(const destino of ['6','5','4','3','2']){
+      const origen = String(Number(destino)-1);
+      filas.push({ destino: destino, origen: origen, alumnos: clases[origen]||[] });
+    }
+    filas.push({ destino:'1', origen:null, alumnos: [] });
+
+    _planPromocion = { nuevo: nuevo, clases: clases, filas: filas, salen: salen };
+
+    let html = '';
+    if(salen.length){
+      html += '<div style="background:#FEE2E2;border-radius:8px;padding:.7rem .9rem;margin-bottom:.75rem;">'
+           + '<strong style="color:#B91C1C;">Salen del centro (' + salen.length + ')</strong><br>'
+           + '<span style="color:#7F1D1D;font-size:.8rem;">' + salen.join(' · ') + '</span></div>';
+    }
+    html += filas.map(function(f){
+      const txt = f.origen
+        ? f.origen + 'º → ' + f.destino + 'º · ' + f.alumnos.length + ' alumnos'
+        : '1º → queda vacío, añade a los que llegan';
+      return '<div style="padding:.45rem .1rem;border-bottom:1px solid var(--border);">' + txt + '</div>';
+    }).join('');
+    html += '<div style="margin-top:.75rem;color:var(--text-muted);font-size:.8rem;">'
+         + 'Curso ' + YEAR + ' → <strong>' + nuevo + '</strong>. '
+         + 'Los resultados de ' + YEAR + ' se conservan y podrás consultarlos cambiando el curso aquí mismo.</div>';
+
+    cont.innerHTML = html;
+    document.getElementById('cur-confirm').style.display = 'block';
+  } catch(e){
+    cont.innerHTML = '<div style="color:#B91C1C;">No se pudo leer: ' + (e.code||e.message) + '</div>';
+  }
+}
+
+async function cvPromocionar(){
+  if(!isSuperUser){ showToast('🔒 Solo el superusuario','warning'); return; }
+  if(!_planPromocion){ showToast('Pulsa antes «Ver qué va a pasar»','error'); return; }
+  const salen = _planPromocion.salen.length;
+  if(!confirm('Se va a pasar todo el alumnado al curso ' + _planPromocion.nuevo + '.\n\n'
+    + (salen ? salen + ' alumnos de 6º saldrán del listado.\n' : '')
+    + '1º quedará vacío.\n\nEsta acción no se puede deshacer. ¿Continuar?')) return;
+
+  const btn = document.getElementById('cur-btn-ok');
+  btn.disabled = true; btn.textContent = 'Aplicando…';
+  try{
+    for(const f of _planPromocion.filas){
+      await db.collection('cv_clases').doc(f.destino).set({ alumnos: f.alumnos });
+    }
+    YEAR = _planPromocion.nuevo;
+    localStorage.setItem('cv_year', YEAR);
+    try{ await db.collection('cv_config').doc('centro').set({ curso: YEAR }, { merge:true }); } catch(e){}
+    const cy = document.getElementById('cfg-year'); if(cy) cy.value = YEAR;
+
+    showToast('🎓 Curso ' + YEAR + '. Alumnado promocionado.','success');
+    document.getElementById('cur-confirm').style.display = 'none';
+    document.getElementById('cur-preview').innerHTML =
+      '<div style="color:#15803D;font-weight:700;">Hecho. Revisa 1º y añade al alumnado nuevo desde «Gestionar».</div>';
+    _planPromocion = null;
+  } catch(e){
+    showToast('❌ No se pudo: ' + (e.code||e.message),'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Confirmar cambio de curso';
+  }
+}
+
 // ════════════════════════════════════════
 // PANEL DE DOCENTES (solo superusuario)
 // ════════════════════════════════════════
@@ -2823,6 +2954,14 @@ window.addEventListener('DOMContentLoaded',()=>{
       if(!u){ _fichaAcceso=null; isSuperUser=false; currentRole='admin'; studentUnlocked=false; return; }
       const ficha = await cargarFichaAcceso();
       if(!ficha){ await cvSalir(); return; }
+      // El curso activo lo marca el centro, no cada dispositivo
+      try{
+        const cfg = await db.collection('cv_config').doc('centro').get();
+        if(cfg.exists && cfg.data().curso){
+          YEAR = cfg.data().curso;
+          localStorage.setItem('cv_year', YEAR);
+        }
+      } catch(e){}
       isSuperUser = (ficha.rol === 'super');
       currentRole = isSuperUser ? 'super' : 'admin';
       studentUnlocked = true;
