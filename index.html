@@ -751,6 +751,7 @@ details summary::-webkit-details-marker{display:none;}
         <option value="nov">Noviembre</option>
         <option value="abril">Abril</option>
       </select>
+      <select class="sel-sm" id="dashCurso" onchange="cvCambiarCursoVista(this.value)" title="Curso académico"></select>
       <button class="btn-sm btn-blue" onclick="showManage()">⚙️ Gestionar</button>
       <button class="btn-sm btn-blue" onclick="showConfig()">🔧 Config</button>
       <button class="btn-sm btn-orange" onclick="window.print()">📄 PDF</button>
@@ -1020,6 +1021,9 @@ let YEAR      = localStorage.getItem('cv_year')||'2025-2026';
 // Curso al que pertenece cada respuesta. Antes no se guardaba, asi que las
 // respuestas anteriores se consideran del curso indicado en CURSO_HISTORICO.
 const CURSO_HISTORICO = '2025-2026';
+// Curso en vigor: donde se guardan los cuestionarios nuevos. YEAR es solo
+// lo que se esta viendo, que puede ser un curso anterior.
+let CURSO_CENTRO = YEAR;
 function cursoDe(r){ return (r && r.curso) ? r.curso : CURSO_HISTORICO; }
 function delCursoActivo(lista){ return (lista||[]).filter(r=>cursoDe(r)===YEAR); }
 
@@ -1205,8 +1209,13 @@ async function nextQ(){
 }
 
 async function submitSurvey(){
+  // Si alguien esta consultando un curso antiguo, el cuestionario se guarda
+  // igualmente en el curso en vigor. Mejor decirlo que dejarlo implicito.
+  if(YEAR !== CURSO_CENTRO){
+    showToast('Se guarda en el curso '+CURSO_CENTRO,'warning');
+  }
   const session=document.getElementById('sessionSelect').value;
-  const data={alumno:curStudent,clase:curClass,sesion:session,curso:YEAR,timestamp:new Date().toISOString(),respuestas:answers};
+  const data={alumno:curStudent,clase:curClass,sesion:session,curso:CURSO_CENTRO,timestamp:new Date().toISOString(),respuestas:answers};
   try {
     if(fbOk){
       await db.collection('cv_respuestas').add(data);
@@ -2734,6 +2743,55 @@ function _applyRole(role){
 // INIT
 // ════════════════════════════════════════
 // ════════════════════════════════════════
+// SELECTOR DE CURSO EN EL PANEL
+// ────────────────────────────────────────
+// Permite consultar cursos anteriores sin cambiar nada: solo afecta a lo
+// que se muestra. Los cuestionarios nuevos siguen guardandose en CURSO_CENTRO.
+// ════════════════════════════════════════
+function cvCursosDisponibles(){
+  const lista = new Set([CURSO_CENTRO, CURSO_HISTORICO]);
+  (window._cursosVistos||[]).forEach(c=>lista.add(c));
+  return Array.from(lista).filter(Boolean).sort().reverse();
+}
+
+function cvPintarSelectorCurso(){
+  const sel = document.getElementById('dashCurso');
+  if(!sel) return;
+  sel.innerHTML = cvCursosDisponibles().map(function(c){
+    return '<option value="'+c+'">Curso '+c+(c===CURSO_CENTRO?'':' · archivo')+'</option>';
+  }).join('');
+  sel.value = YEAR;
+  const archivo = YEAR !== CURSO_CENTRO;
+  sel.style.background = archivo ? '#FEF3C7' : '';
+  sel.style.color      = archivo ? '#78350F' : '';
+  sel.style.fontWeight = archivo ? '800' : '';
+  sel.title = archivo
+    ? 'Estás viendo un curso anterior. Los cuestionarios nuevos se guardan en '+CURSO_CENTRO+'.'
+    : 'Curso académico en vigor';
+}
+
+function cvCambiarCursoVista(curso){
+  if(!curso) return;
+  YEAR = curso;
+  cvPintarSelectorCurso();
+  if(typeof loadDash==='function') loadDash();
+  showToast(curso===CURSO_CENTRO ? ('Curso '+curso) : ('📁 Viendo '+curso+' (archivo)'),
+            curso===CURSO_CENTRO ? 'success' : 'warning');
+}
+
+// Descubre que cursos tienen datos guardados
+async function cvDetectarCursos(){
+  if(!fbOk) return;
+  try{
+    const snap = await db.collection('cv_respuestas').get();
+    const vistos = new Set();
+    snap.forEach(function(d){ const v=d.data()||{}; vistos.add(v.curso || CURSO_HISTORICO); });
+    window._cursosVistos = Array.from(vistos);
+    cvPintarSelectorCurso();
+  } catch(e){ console.warn('No se pudieron detectar cursos:', e.message); }
+}
+
+// ════════════════════════════════════════
 // CAMBIO DE CURSO — promocion del alumnado
 // ────────────────────────────────────────
 // 6º sale del centro, el resto sube un curso y 1º queda vacio.
@@ -2815,7 +2873,10 @@ async function cvPromocionar(){
       await db.collection('cv_clases').doc(f.destino).set({ alumnos: f.alumnos });
     }
     YEAR = _planPromocion.nuevo;
+    CURSO_CENTRO = YEAR;
     localStorage.setItem('cv_year', YEAR);
+    window._cursosVistos = (window._cursosVistos||[]).concat([YEAR]);
+    cvPintarSelectorCurso();
     try{ await db.collection('cv_config').doc('centro').set({ curso: YEAR }, { merge:true }); } catch(e){}
     const cy = document.getElementById('cfg-year'); if(cy) cy.value = YEAR;
 
@@ -2962,6 +3023,9 @@ window.addEventListener('DOMContentLoaded',()=>{
           localStorage.setItem('cv_year', YEAR);
         }
       } catch(e){}
+      CURSO_CENTRO = YEAR;
+      cvPintarSelectorCurso();
+      cvDetectarCursos();
       isSuperUser = (ficha.rol === 'super');
       currentRole = isSuperUser ? 'super' : 'admin';
       studentUnlocked = true;
