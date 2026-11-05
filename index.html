@@ -643,7 +643,7 @@ details summary::-webkit-details-marker{display:none;}
     </button>
     <div class="card-top">
       <img id="setupLogoImg" class="card-logo" src="" alt="">
-      <div><h2>¿Quién eres?</h2><p>Elige la sesión, tu clase y tu número de lista</p></div>
+      <div><h2>¿Quién eres?</h2><p>Elige la sesión, tu clase y tus iniciales</p></div>
     </div>
     <div class="field">
       <label>📅 Sesión</label>
@@ -665,7 +665,7 @@ details summary::-webkit-details-marker{display:none;}
       </select>
     </div>
     <div class="field" id="studentField" style="display:none;">
-      <label>👤 Tu número de lista</label>
+      <label>👤 Tus iniciales</label>
       <select id="studentSelect" onchange="document.getElementById('startBtn').disabled=!this.value">
         <option value="">— Elige tu nombre —</option>
       </select>
@@ -771,7 +771,7 @@ details summary::-webkit-details-marker{display:none;}
 <div id="manageModal" class="modal-overlay hidden">
   <div class="modal">
     <h3>⚙️ Gestionar Alumnos</h3>
-    <p>🔒 En la nube solo se guardan <b>números de lista</b> (Alumno 1, Alumno 2…). Escribe cuántos alumnos hay, o pega la lista en orden: los nombres se quedan <b>solo en este dispositivo</b> para que el alumnado se encuentre al hacer el cuestionario.</p>
+    <p>🔒 En la nube solo se guardan las <b>siglas</b> (Nombre + primer apellido: Lucía Andrés → <b>LA</b>). Si pegas la lista con nombres, los nombres se quedan <b>solo en este dispositivo</b>.</p>
     <div class="field">
       <label>Clase</label>
       <select id="manageClass" onchange="loadManage()" style="width:100%;padding:.85rem 1rem;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;background:white;outline:none;font-size:.95rem;">
@@ -781,12 +781,12 @@ details summary::-webkit-details-marker{display:none;}
     </div>
     <div class="tag-wrap" id="manageTags" style="min-height:50px;"></div>
     <div class="input-row">
-      <textarea id="manageInput" rows="2" placeholder="Nº de alumnos (p. ej. 22) o lista de nombres en orden"
+      <textarea id="manageInput" rows="2" placeholder="Pega la lista de la clase (un alumno por línea) o escribe siglas: LA, MP…"
         style="padding:.75rem 1rem;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:.95rem;outline:none;flex:1;resize:vertical;"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!/\n/.test(this.value)&&/^\d*$/.test(this.value.trim())){event.preventDefault();addStudent()}"></textarea>
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!/\n/.test(this.value)){event.preventDefault();addStudent()}"></textarea>
       <button class="btn-add" onclick="addStudent()">+</button>
     </div>
-    <div style="margin-top:.75rem;font-size:.78rem;color:var(--text-muted);font-weight:600;">💡 Un número amplía la lista hasta ese número. Una lista de nombres (separados por comas o saltos de línea) se numera en orden. Tocar un número lo quita sin renumerar a los demás.</div>
+    <div style="margin-top:.75rem;font-size:.78rem;color:var(--text-muted);font-weight:600;">💡 Vale la lista de Séneca («Apellidos, Nombre») o «Nombre Apellidos». Si dos coinciden, se añade la inicial del segundo apellido (LAM) o un número. Toca unas siglas para quitarlas.</div>
     <div class="modal-btns">
       <button class="btn-sm" style="background:var(--bg);color:var(--text-secondary);border:1.5px solid var(--border);" onclick="closeManage()">Cancelar</button>
       <button class="btn-sm" style="background:var(--primary);color:white;" onclick="saveManage()">Guardar</button>
@@ -1124,7 +1124,7 @@ async function loadStudents(){
       students=JSON.parse(localStorage.getItem('cv_al_'+cls)||'[]');
     }
     classStudents=students;
-    sel.innerHTML='<option value="">— Elige tu número de lista —</option>';
+    sel.innerHTML='<option value="">— Elige tus iniciales —</option>';
     students.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=cvVer(s,cls); sel.appendChild(o); });
     loading.style.display='none';
     if(students.length===0) showToast('⚠️ Esta clase aún no tiene alumnos añadidos','warning');
@@ -1258,7 +1258,7 @@ async function doLogin(){
     updateRoleBadge();
     loadDash();
     setTimeout(()=>showToast('🔐 Sesión iniciada: '+(r.ficha.nombre||'').split(',')[0],'success'),300);
-    if(isSuperUser) setTimeout(()=>cvMigrarANumeros(false),1500);
+    if(isSuperUser) setTimeout(()=>cvMigrarASiglas(false),1500);
   } catch(e){
     console.warn('Acceso rechazado:', e && e.code);
     showToast('❌ '+cvMensajeError(e),'error');
@@ -2037,21 +2037,36 @@ function drawProfiles(a){
 // ════════════════════════════════════════
 // UTILIDADES NOMBRE ANÓNIMO
 // ════════════════════════════════════════
-// ── Números de lista: en la nube y en la IA solo «Alumno N» ──
+// ── Siglas: en la nube y en la IA solo las iniciales (Nombre + 1.er apellido) ──
 const CV_NUM=/^Alumno \d+$/;
-function cvNum(id){ const m=String(id).match(/(\d+)$/); return m?parseInt(m[1],10):0; }
+const CV_SIG=/^[A-Z]{1,3}\d{0,2}$/;
 function esc0(t){ return String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function cvNomLocal(key){ try{ return JSON.parse(localStorage.getItem('cv_nom_'+key)||'{}')||{}; }catch(e){ return {}; } }
 function cvGuardarNomLocal(key,map){ try{ localStorage.setItem('cv_nom_'+key,JSON.stringify(map)); }catch(e){} }
-// Muestra «5 · Lucía» si este dispositivo tiene la lista; si no, «Alumno 5».
+function cvIni(w){ return String(w||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z]/g,'').charAt(0).toUpperCase(); }
+// Acepta «Apellido1 Apellido2, Nombre» (como Séneca) o «Nombre Apellido1 Apellido2».
+function cvPartes(t){
+  t=String(t).trim().replace(/^\d+[.)-]?\s*/,'');
+  if(t.includes(',')){ const i=t.indexOf(','); const ap=t.slice(0,i).trim().split(/\s+/); return [t.slice(i+1).trim().split(/\s+/)[0]||'',ap[0]||'',ap[1]||'']; }
+  const p=t.split(/\s+/); return [p[0]||'',p[1]||'',p[2]||''];
+}
+function cvSigla(nombre,usadas){
+  const [n,a1,a2]=cvPartes(nombre);
+  let sg=(cvIni(n)+cvIni(a1))||'XX';
+  if(usadas.has(sg)&&a2) sg+=cvIni(a2);
+  const base=sg; let k=2; while(usadas.has(sg)) sg=base+(k++);
+  usadas.add(sg); return sg;
+}
+// Muestra «LA · Lucía Andrés» si este dispositivo tiene la lista; si no, solo «LA».
 function cvVer(id,cls,corto){
   const n=cvNomLocal(YEAR+'_'+cls)[id];
   if(!n) return id;
-  return cvNum(id)+' · '+(corto?n.split(' ')[0]:n);
+  const bonito=n.includes(',')?(n.slice(n.indexOf(',')+1).trim()+' '+n.slice(0,n.indexOf(',')).trim()):n;
+  return id+' · '+(corto?cvPartes(n)[0]:bonito);
 }
-// Pasa los listados y respuestas antiguos (con nombres) a números de lista.
-// Los nombres se quedan solo en el dispositivo que hace el cambio.
-async function cvMigrarANumeros(manual){
+// Pasa los listados y respuestas con nombres (o «Alumno N» de los que este
+// dispositivo sabe el nombre) a siglas. Los nombres se quedan solo aquí.
+async function cvMigrarASiglas(manual){
   if(!fbOk||!isSuperUser) return;
   try{
     const listas=[];
@@ -2062,35 +2077,42 @@ async function cvMigrarANumeros(manual){
     const h=await db.collection('cv_clases_hist').get();
     h.forEach(d=>{ const i=d.id.lastIndexOf('_'); listas.push({ref:d.ref,curso:d.id.slice(0,i),cls:d.id.slice(i+1),alumnos:(d.data().alumnos||[]).slice()}); });
     const rs=await db.collection('cv_respuestas').get();
-    const hayNombres=listas.some(l=>l.alumnos.some(a=>!CV_NUM.test(a)))||rs.docs.some(d=>!CV_NUM.test(d.data().alumno||''));
-    if(!hayNombres){ if(manual) showToast('✅ Ya está todo con números de lista','success'); return; }
-    if(!manual && !confirm('Convivencia+ pasa a guardar solo números de lista (Alumno 1, Alumno 2…).\n\nVoy a cambiar los nombres de la nube por su número, en el orden de cada lista. Los nombres se quedarán solo en este dispositivo.\n\n¿Continuar?')) return;
     const mapas={};
-    listas.forEach(l=>{
-      const m={}; let n=0;
-      l.alumnos.forEach(a=>{ n++; m[a]=CV_NUM.test(a)?a:'Alumno '+n; });
-      l.mapa=m; l.siguiente=n; mapas[l.curso+'_'+l.cls]=l;
-    });
-    const idDe=(l,nombre)=>{
-      if(!nombre) return nombre;
-      if(CV_NUM.test(nombre)) return nombre;
-      if(!l.mapa[nombre]){ l.siguiente++; l.mapa[nombre]='Alumno '+l.siguiente; l.alumnos.push(nombre); }
-      return l.mapa[nombre];
+    const nuevaLista=(curso,cls,ref,alumnos)=>{
+      const l={ref,curso,cls,alumnos,mapa:{},usadas:new Set(),loc:cvNomLocal(curso+'_'+cls),nombres:{}};
+      alumnos.forEach(a=>{ if(CV_SIG.test(a)){ l.mapa[a]=a; l.usadas.add(a); } });
+      alumnos.forEach(a=>{ if(!CV_SIG.test(a)) cvIdDe(l,a,false); });
+      mapas[curso+'_'+cls]=l; return l;
     };
-    const sinLista=(curso,cls)=>{ const k=curso+'_'+cls; if(!mapas[k]) mapas[k]={ref:null,curso,cls,alumnos:[],mapa:{},siguiente:0}; return mapas[k]; };
+    function cvIdDe(l,x,anadir){
+      if(!x||typeof x!=='string') return x;
+      if(l.mapa[x]) return l.mapa[x];
+      if(CV_SIG.test(x)) return x;
+      const nombre=CV_NUM.test(x)?l.loc[x]:x;
+      if(!nombre){ l.mapa[x]=x; return x; }          // «Alumno N» sin nombre conocido: se queda igual
+      const sg=cvSigla(nombre,l.usadas);
+      l.mapa[x]=sg; l.nombres[sg]=nombre;
+      if(anadir) l.alumnos.push(x);
+      return sg;
+    }
+    listas.forEach(l=>nuevaLista(l.curso,l.cls,l.ref,l.alumnos));
+    const de=(curso,cls)=>mapas[curso+'_'+cls]||nuevaLista(curso,cls,null,[]);
     const ops=[];
     rs.docs.forEach(d=>{
-      const r=d.data(); const l=sinLista(cursoDe(r),r.clase);
-      const resp={}; Object.entries(r.respuestas||{}).forEach(([k,v])=>{ resp[k]=Array.isArray(v)?v.map(x=>idDe(l,x)):v; });
-      const nuevo=idDe(l,r.alumno);
+      const r=d.data(); const l=de(cursoDe(r),r.clase);
+      const resp={}; Object.entries(r.respuestas||{}).forEach(([k,v])=>{ resp[k]=Array.isArray(v)?v.map(x=>cvIdDe(l,x,true)):v; });
+      const nuevo=cvIdDe(l,r.alumno,true);
       if(nuevo!==r.alumno||JSON.stringify(resp)!==JSON.stringify(r.respuestas||{})) ops.push([d.ref,{alumno:nuevo,respuestas:resp}]);
     });
     const td=await db.collection('cv_docente').get();
     td.forEach(d=>{
-      const cls=d.id.split('_')[0]; const l=mapas[CURSO_CENTRO+'_'+cls]; const o=d.data()||{}; const n={}; let cambia=false;
-      Object.entries(o).forEach(([k,v])=>{ if(CV_NUM.test(k)) n[k]=v; else { cambia=true; if(l&&l.mapa[k]) n[l.mapa[k]]=v; } });
+      const l=mapas[CURSO_CENTRO+'_'+d.id.split('_')[0]]; const o=d.data()||{}; const n={}; let cambia=false;
+      Object.entries(o).forEach(([k,v])=>{ const id=l?l.mapa[k]:null; if(CV_SIG.test(k)) n[k]=v; else { cambia=true; if(id) n[id]=v; } });
       if(cambia) ops.push([d.ref,n,'set']);
     });
+    const cambiaLista=l=>l.ref&&l.alumnos.some(a=>(l.mapa[a]||a)!==a);
+    if(!ops.length&&!Object.values(mapas).some(cambiaLista)){ if(manual) showToast('✅ Ya está todo con siglas','success'); return; }
+    if(!confirm('Convivencia+ pasa a guardar solo las siglas del alumnado (Nombre + primer apellido: «LA»).\n\nVoy a cambiar los nombres de la nube por sus siglas. Los nombres se quedarán solo en este dispositivo.\n\n¿Continuar?')) return;
     // Primero respuestas y observaciones; los listados, al final.
     for(let i=0;i<ops.length;i+=400){
       const b=db.batch();
@@ -2099,22 +2121,22 @@ async function cvMigrarANumeros(manual){
     }
     const b=db.batch();
     Object.values(mapas).forEach(l=>{
-      const loc=cvNomLocal(l.curso+'_'+l.cls);
-      Object.entries(l.mapa).forEach(([nom,id])=>{ if(!CV_NUM.test(nom)) loc[id]=nom; });
+      const loc={}; Object.entries(l.loc).forEach(([k,v])=>{ if(!l.mapa[k]||l.mapa[k]===k) loc[k]=v; });
+      Object.assign(loc,l.nombres);
       cvGuardarNomLocal(l.curso+'_'+l.cls,loc);
-      if(l.ref) b.update(l.ref,{alumnos:l.alumnos.map(a=>l.mapa[a]||a)});
+      if(cambiaLista(l)) b.update(l.ref,{alumnos:l.alumnos.map(a=>l.mapa[a]||a)});
     });
     await b.commit();
-    showToast('🔒 Listo: en la nube ya solo hay números de lista','success');
+    showToast('🔒 Listo: en la nube ya solo hay siglas','success');
     if(typeof loadDash==='function') loadDash();
   }catch(e){
     console.error(e);
-    showToast('⚠️ No se pudo pasar a números: '+e.message,'error');
+    showToast('⚠️ No se pudo pasar a siglas: '+e.message,'error');
   }
 }
 
 function anonName(fullName){
-  if(CV_NUM.test(fullName)) return fullName;
+  if(CV_NUM.test(fullName)||CV_SIG.test(fullName)) return fullName;
   const p=fullName.trim().split(/\s+/);
   return p[1]?`${p[0]} ${p[1][0]}.`:p[0];
 }
@@ -2582,7 +2604,7 @@ RECURSOS DEL CENTRO:
 ════════════════════════════════════════════════════
 INSTRUCCIONES:
 
-⚠️ Protección de datos: cada alumno/a aparece solo con su número de lista («Alumno N»). Usa exactamente esas etiquetas y no pidas nombres ni datos personales.
+⚠️ Protección de datos: cada alumno/a aparece solo con sus siglas (p. ej. «LA»). Usa exactamente esas siglas y no pidas nombres ni datos personales.
 
 Eres el orientador/a del CEIP Capitulaciones de Santa Fe (Santa Fe, Granada).
 Con los datos anteriores, redacta DOS documentos separados y claramente diferenciados:
@@ -2617,7 +2639,7 @@ Valor numérico + ✅/⚠️/🔴 + una línea de interpretación
 Máx. 2 frases cada uno. Accionable e inmediato.
 
 [BLOQUE 3 — ALUMNOS QUE NECESITAN TU ATENCIÓN]
-Solo los casos excepcionales. Para cada uno: número de lista («Alumno N») + rol + 3-4 líneas de descripción humana (no técnica) + una ACCIÓN concreta en negrita.
+Solo los casos excepcionales. Para cada uno: siglas + rol + 3-4 líneas de descripción humana (no técnica) + una ACCIÓN concreta en negrita.
 
 [BLOQUE 4 — PLAN DE ACCIÓN]
 Línea de tiempo: HOY / ESTA SEMANA / SEM.1-2 / SEM.2-4 / FIN DE CURSO
@@ -2671,19 +2693,15 @@ function addStudent(){
   const val=input.value.trim();
   if(!val)return;
   const cls=document.getElementById('manageClass').value;
-  const maxN=()=>manageList.reduce((m,id)=>Math.max(m,cvNum(id)),0);
-  if(/^\d+$/.test(val)){
-    const n=Math.min(40,parseInt(val,10));
-    for(let k=maxN()+1;k<=n;k++) manageList.push('Alumno '+k);
-  } else {
-    const names=val.split(/[,\n]+/).map(n=>n.trim().replace(/^\d+[.)-]?\s*/,'')).filter(n=>n);
-    const loc=cvNomLocal(YEAR+'_'+cls);
-    // Si la lista está vacía, se numera desde 1; si no, a continuación.
-    let k=manageList.length?maxN():0;
-    names.forEach(n=>{ k++; const id='Alumno '+k; if(!manageList.includes(id)) manageList.push(id); loc[id]=n; });
-    cvGuardarNomLocal(YEAR+'_'+cls,loc);
-  }
-  manageList.sort((a,b)=>cvNum(a)-cvNum(b));
+  const loc=cvNomLocal(YEAR+'_'+cls);
+  const usadas=new Set(manageList);
+  // Con saltos de línea, una persona por línea (admite «Apellidos, Nombre»); si no, separadas por comas.
+  const trozos=(/\n/.test(val)?val.split(/\n+/):val.split(/[,;]+/)).map(t=>t.trim()).filter(Boolean);
+  trozos.forEach(t=>{
+    if(/^[A-ZÑ]{2,3}\d{0,2}$/.test(t)){ const sg=t.replace('Ñ','N'); if(!usadas.has(sg)){ usadas.add(sg); manageList.push(sg); } return; }
+    const sg=cvSigla(t,usadas); manageList.push(sg); loc[sg]=t.replace(/^\d+[.)-]?\s*/,'');
+  });
+  cvGuardarNomLocal(YEAR+'_'+cls,loc);
   input.value='';
   renderManageTags();
 }
@@ -3151,7 +3169,7 @@ window.addEventListener('DOMContentLoaded',()=>{
       currentRole = isSuperUser ? 'super' : 'admin';
       studentUnlocked = true;
       if(typeof updateRoleBadge==='function') updateRoleBadge();
-      if(isSuperUser) setTimeout(()=>cvMigrarANumeros(false),2500);
+      if(isSuperUser) setTimeout(()=>cvMigrarASiglas(false),2500);
     });
   }
   document.querySelector('.home-school').innerHTML=`<svg class="school-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>${SCHOOL}`;
@@ -3160,12 +3178,12 @@ window.addEventListener('DOMContentLoaded',()=>{
 <script>
 // ── Aviso de novedades (una sola vez en cada dispositivo) ──
 (function(){
-  const ID='convivencia-nov-2026-11-05-numeros';
+  const ID='convivencia-nov-2026-11-05-siglas';
   try{ if(localStorage.getItem(ID)) return; }catch(e){ return; }
   const d=document.createElement('div');
   d.setAttribute('role','dialog'); d.setAttribute('aria-label','Novedades');
   d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px';
-  d.innerHTML='<div style="background:#fff;max-width:420px;width:100%;border-radius:16px;padding:22px;font-family:inherit;box-shadow:0 20px 50px rgba(0,0,0,.25)"><div style="font-weight:800;font-size:1.2rem;margin-bottom:8px">🔒 Novedades</div><p style="margin:0 0 14px;line-height:1.5">Ahora el alumnado aparece por su <b>número de lista</b> (Alumno 1, Alumno 2…). Los nombres ya no van a la nube ni a la IA: si pegas la lista en <b>Gestionar</b>, se quedan solo en ese dispositivo.</p><button style="width:100%;padding:12px;border:0;border-radius:10px;background:#4f46e5;color:#fff;font-weight:800;font-size:1rem;cursor:pointer">Entendido</button></div>';
+  d.innerHTML='<div style="background:#fff;max-width:420px;width:100%;border-radius:16px;padding:22px;font-family:inherit;box-shadow:0 20px 50px rgba(0,0,0,.25)"><div style="font-weight:800;font-size:1.2rem;margin-bottom:8px">🔒 Novedades</div><p style="margin:0 0 14px;line-height:1.5">Ahora el alumnado aparece con sus <b>siglas</b> (Nombre + primer apellido: «LA»). Los nombres ya no van a la nube ni a la IA: si pegas la lista en <b>Gestionar</b>, se quedan solo en ese dispositivo.</p><button style="width:100%;padding:12px;border:0;border-radius:10px;background:#4f46e5;color:#fff;font-weight:800;font-size:1rem;cursor:pointer">Entendido</button></div>';
   d.querySelector('button').onclick=()=>{ try{localStorage.setItem(ID,'1');}catch(e){} d.remove(); };
   document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(d));
   if(document.readyState!=='loading') document.body.appendChild(d);
