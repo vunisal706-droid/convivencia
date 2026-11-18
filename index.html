@@ -1933,7 +1933,7 @@ function drawSociogram(a,responses){
   ctx.fillText('SOCIOGRAMA DE CONVIVENCIA',16,12);
   ctx.font='11px Nunito,sans-serif';
   ctx.fillStyle='rgba(30,95,204,.4)';
-  ctx.fillText('CEIP Capitulaciones — '+YEAR,16,28);
+  ctx.fillText(SCHOOL+' — '+YEAR,16,28);
 
   // ── LEYENDA INFERIOR ──
   const legendItems=[
@@ -3178,16 +3178,334 @@ window.addEventListener('DOMContentLoaded',()=>{
 <script>
 // ── Aviso de novedades (una sola vez en cada dispositivo) ──
 (function(){
-  const ID='convivencia-nov-2026-11-05-siglas';
+  const ID='convivencia-nov-2026-11-18-demo';
+  if(/[?&]demo\b/.test(location.search)) return;
   try{ if(localStorage.getItem(ID)) return; }catch(e){ return; }
   const d=document.createElement('div');
   d.setAttribute('role','dialog'); d.setAttribute('aria-label','Novedades');
   d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px';
-  d.innerHTML='<div style="background:#fff;max-width:420px;width:100%;border-radius:16px;padding:22px;font-family:inherit;box-shadow:0 20px 50px rgba(0,0,0,.25)"><div style="font-weight:800;font-size:1.2rem;margin-bottom:8px">🔒 Novedades</div><p style="margin:0 0 14px;line-height:1.5">Ahora el alumnado aparece con sus <b>siglas</b> (Nombre + primer apellido: «LA»). Los nombres ya no van a la nube ni a la IA: si pegas la lista en <b>Gestionar</b>, se quedan solo en ese dispositivo.</p><button style="width:100%;padding:12px;border:0;border-radius:10px;background:#4f46e5;color:#fff;font-weight:800;font-size:1rem;cursor:pointer">Entendido</button></div>';
+  d.innerHTML='<div style="background:#fff;max-width:420px;width:100%;border-radius:16px;padding:22px;font-family:inherit;box-shadow:0 20px 50px rgba(0,0,0,.25)"><div style="font-weight:800;font-size:1.2rem;margin-bottom:8px">🧪 Novedades</div><p style="margin:0 0 14px;line-height:1.5">Nuevo <b>modo demostración</b>: en la entrada, «Ver una demostración» abre la app con un colegio inventado y una guía que explica cada gráfica. No guarda nada.</p><button style="width:100%;padding:12px;border:0;border-radius:10px;background:#4f46e5;color:#fff;font-weight:800;font-size:1rem;cursor:pointer">Entendido</button></div>';
   d.querySelector('button').onclick=()=>{ try{localStorage.setItem(ID,'1');}catch(e){} d.remove(); };
   document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(d));
   if(document.readyState!=='loading') document.body.appendChild(d);
 })();
 </script>
+<!-- DEMO -->
+<script>
+/* ══════════ MODO DEMOSTRACIÓN · kit común ══════════
+   Base de datos de mentira (en memoria, nada sale del navegador), banner y guía
+   explicativa con «?» junto a cada apartado. Cada app añade sus datos y su guía. */
+(function () {
+  const clon = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
+  let _n = 0; const nuevoId = () => 'demo' + Date.now().toString(36) + (++_n);
+
+  /* ── Firestore (compat) en memoria ── */
+  function MockFS(semilla) {
+    const C = {}; Object.entries(semilla || {}).forEach(([c, docs]) => { C[c] = {}; Object.entries(docs).forEach(([id, d]) => C[c][id] = clon(d)); });
+    const col = n => (C[n] = C[n] || {});
+    const oyentes = [];
+    const avisar = () => oyentes.slice().forEach(f => { try { f(); } catch (e) {} });
+    const snapDoc = (c, id) => { const d = col(c)[id]; return { id, exists: d !== undefined, data: () => clon(d), get: k => (d || {})[k], ref: docRef(c, id) }; };
+    const valor = (o, campo) => campo.split('.').reduce((a, k) => a == null ? a : a[k], o);
+    function cumple(d, [campo, op, v]) {
+      const x = valor(d, campo);
+      switch (op) {
+        case '==': return x === v; case '!=': return x !== v; case '<': return x < v; case '<=': return x <= v;
+        case '>': return x > v; case '>=': return x >= v; case 'in': return (v || []).includes(x);
+        case 'array-contains': return Array.isArray(x) && x.includes(v);
+        case 'array-contains-any': return Array.isArray(x) && (v || []).some(y => x.includes(y));
+        default: return true;
+      }
+    }
+    function query(c, filtros, orden, limite) {
+      const q = {
+        where: (a, b, v) => query(c, filtros.concat([[a, b, v]]), orden, limite),
+        orderBy: (campo, dir) => query(c, filtros, orden.concat([[campo, dir]]), limite),
+        limit: n => query(c, filtros, orden, n), limitToLast: n => query(c, filtros, orden, -n),
+        get: async () => {
+          let docs = Object.keys(col(c)).filter(id => filtros.every(f => cumple(col(c)[id], f))).map(id => snapDoc(c, id));
+          orden.forEach(([campo, dir]) => docs.sort((a, b) => { const x = valor(a.data(), campo), y = valor(b.data(), campo); return (x > y ? 1 : x < y ? -1 : 0) * (dir === 'desc' ? -1 : 1); }));
+          if (limite > 0) docs = docs.slice(0, limite); else if (limite < 0) docs = docs.slice(limite);
+          return { docs, size: docs.length, empty: !docs.length, forEach: f => docs.forEach(f), docChanges: () => docs.map(d => ({ type: 'added', doc: d })) };
+        },
+        onSnapshot: (ok) => { const f = () => q.get().then(ok); oyentes.push(f); f(); return () => { const i = oyentes.indexOf(f); if (i >= 0) oyentes.splice(i, 1); }; }
+      };
+      if (c !== null) Object.assign(q, { doc: id => docRef(c, id || nuevoId()), add: async d => { const id = nuevoId(); col(c)[id] = clon(d); avisar(); return docRef(c, id); } });
+      return q;
+    }
+    function docRef(c, id) {
+      const r = {
+        id, path: c + '/' + id,
+        get: async () => snapDoc(c, id),
+        set: async (d, o) => { col(c)[id] = (o && o.merge) ? Object.assign(col(c)[id] || {}, clon(d)) : clon(d); avisar(); },
+        update: async d => { const cur = col(c)[id] = col(c)[id] || {}; Object.entries(d).forEach(([k, v]) => { if (k.includes('.')) { const p = k.split('.'); let o = cur; p.slice(0, -1).forEach(s => o = o[s] = o[s] || {}); o[p[p.length - 1]] = clon(v); } else cur[k] = clon(v); }); avisar(); },
+        delete: async () => { delete col(c)[id]; avisar(); },
+        onSnapshot: ok => { const f = () => ok(snapDoc(c, id)); oyentes.push(f); f(); return () => { const i = oyentes.indexOf(f); if (i >= 0) oyentes.splice(i, 1); }; },
+        collection: sub => query(c + '/' + id + '/' + sub, [], [], 0)
+      };
+      return r;
+    }
+    return {
+      collection: n => query(n, [], [], 0),
+      doc: p => { const i = p.lastIndexOf('/'); return docRef(p.slice(0, i), p.slice(i + 1)); },
+      batch: () => { const ops = []; const b = { set: (r, d, o) => (ops.push(() => r.set(d, o)), b), update: (r, d) => (ops.push(() => r.update(d)), b), delete: r => (ops.push(() => r.delete()), b), commit: async () => { for (const op of ops) await op(); } }; return b; },
+      runTransaction: async f => f({ get: r => r.get(), set: (r, d, o) => r.set(d, o), update: (r, d) => r.update(d), delete: r => r.delete() }),
+      enablePersistence: async () => {}, settings: () => {}, _datos: C
+    };
+  }
+
+  /* ── Realtime Database (compat) en memoria ── */
+  function MockRTDB(semilla) {
+    const raiz = { v: clon(semilla) || {} };
+    const oyentes = [];
+    const partes = p => String(p || '').split('/').filter(Boolean);
+    const leer = p => partes(p).reduce((o, k) => (o == null ? null : (o[k] === undefined ? null : o[k])), raiz.v);
+    const escribir = (p, v) => {
+      const ps = partes(p); if (!ps.length) { raiz.v = clon(v) || {}; return; }
+      let o = raiz.v; ps.slice(0, -1).forEach(k => { if (o[k] == null || typeof o[k] !== 'object') o[k] = {}; o = o[k]; });
+      if (v === null || v === undefined) delete o[ps[ps.length - 1]]; else o[ps[ps.length - 1]] = clon(v);
+    };
+    const avisar = () => oyentes.slice().forEach(f => { try { f(); } catch (e) {} });
+    function snap(p, v) {
+      const key = partes(p).pop() || null;
+      return {
+        key, val: () => clon(v), exists: () => v !== null && v !== undefined, exportVal: () => clon(v),
+        numChildren: () => (v && typeof v === 'object') ? Object.keys(v).length : 0,
+        hasChildren: () => !!(v && typeof v === 'object' && Object.keys(v).length),
+        hasChild: k => !!(v && typeof v === 'object' && v[k] !== undefined),
+        child: k => snap(p + '/' + k, (v && typeof v === 'object') ? (partes(k).reduce((o, x) => o == null ? null : o[x], v) ?? null) : null),
+        forEach: f => { if (v && typeof v === 'object') { for (const k of Object.keys(v)) { if (f(snap(p + '/' + k, v[k])) === true) return true; } } return false; },
+        ref: ref(p)
+      };
+    }
+    function ref(p, q) {
+      q = q || {};
+      const valorQ = () => {
+        let v = leer(p); if (!q.campo && !q.lim && !('igual' in q) && !q.porClave) return v;
+        if (!v || typeof v !== 'object') return v;
+        let ks = Object.keys(v);
+        const campo = k => q.campo === '$key' ? k : (q.campo === '$value' ? v[k] : (v[k] || {})[q.campo]);
+        if ('igual' in q) ks = ks.filter(k => campo(k) === q.igual);
+        if ('desde' in q) ks = ks.filter(k => campo(k) >= q.desde);
+        if ('hasta' in q) ks = ks.filter(k => campo(k) <= q.hasta);
+        if (q.campo) ks.sort((a, b) => { const x = campo(a), y = campo(b); return x > y ? 1 : x < y ? -1 : 0; });
+        if (q.lim > 0) ks = ks.slice(0, q.lim); else if (q.lim < 0) ks = ks.slice(q.lim);
+        const o = {}; ks.forEach(k => o[k] = v[k]); return o;
+      };
+      const r = {
+        key: partes(p).pop() || null, path: p,
+        child: k => ref(partes(p).concat(partes(k)).join('/')),
+        parent: null,
+        once: async (ev, ok) => { const s = snap(p, valorQ()); if (ok) ok(s); return s; },
+        get: async () => snap(p, valorQ()),
+        on: (ev, ok) => { const f = () => ok(snap(p, valorQ())); f.__ok = ok; f.__p = p; oyentes.push(f); f(); return ok; },
+        off: (ev, ok) => { for (let i = oyentes.length - 1; i >= 0; i--) if (oyentes[i].__p === p && (!ok || oyentes[i].__ok === ok)) oyentes.splice(i, 1); },
+        set: async v => { escribir(p, v); avisar(); },
+        update: async o => { Object.entries(o || {}).forEach(([k, v]) => escribir(partes(p).concat(partes(k)).join('/'), v)); avisar(); },
+        remove: async () => { escribir(p, null); avisar(); },
+        push: v => { const k = nuevoId(); const c = ref(partes(p).concat([k]).join('/')); if (v !== undefined) { escribir(c.path, v); avisar(); } const pr = Promise.resolve(c); c.then = pr.then.bind(pr); c.catch = pr.catch.bind(pr); return c; },
+        transaction: async f => { const v = f(leer(p)); if (v !== undefined) { escribir(p, v); avisar(); } return { committed: true, snapshot: snap(p, leer(p)) }; },
+        orderByChild: c => ref(p, Object.assign({}, q, { campo: c })), orderByKey: () => ref(p, Object.assign({}, q, { campo: '$key' })),
+        orderByValue: () => ref(p, Object.assign({}, q, { campo: '$value' })),
+        equalTo: v => ref(p, Object.assign({}, q, { igual: v })), startAt: v => ref(p, Object.assign({}, q, { desde: v })), endAt: v => ref(p, Object.assign({}, q, { hasta: v })),
+        limitToFirst: n => ref(p, Object.assign({}, q, { lim: n })), limitToLast: n => ref(p, Object.assign({}, q, { lim: -n })),
+        onDisconnect: () => ({ remove: async () => {}, set: async () => {}, update: async () => {}, cancel: async () => {} }),
+        toString: () => 'demo://' + p
+      };
+      return r;
+    }
+    return { ref: p => ref(p || ''), refFromURL: u => ref(''), goOnline() {}, goOffline() {}, _raiz: raiz };
+  }
+
+  /* ── Auth de mentira ── */
+  function MockAuth(usuario) {
+    const u = Object.assign({ uid: 'demo', email: 'demo@demo.local', displayName: 'Demostración', getIdToken: async () => 'demo', getIdTokenResult: async () => ({ claims: {} }) }, usuario || {});
+    return { currentUser: u, onAuthStateChanged: f => { setTimeout(() => f(u), 0); return () => {}; }, signOut: async () => location.reload(), signInWithEmailAndPassword: async () => ({ user: u }), setPersistence: async () => {} };
+  }
+
+  /* ── Banner y guía explicativa ── */
+  const CSS = `
+  .dmo-banda{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:2147483000;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+    background:#111827;color:#fff;font:600 13px/1.3 system-ui,-apple-system,'Segoe UI',sans-serif;padding:8px 10px 8px 14px;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.3);max-width:calc(100vw - 20px)}
+  .dmo-banda b{color:#FDE68A}.dmo-banda button{all:unset;cursor:pointer;background:#FDE68A;color:#111827;padding:6px 12px;border-radius:999px;font-weight:700}
+  .dmo-banda button.dmo-salir{background:#374151;color:#fff}
+  .dmo-q{all:unset;box-sizing:border-box;display:inline-grid;place-items:center;width:22px;height:22px;margin:0 6px;border-radius:50%;background:#F59E0B;color:#fff;
+    font:800 13px/1 system-ui,sans-serif;cursor:pointer;vertical-align:middle;box-shadow:0 0 0 3px rgba(245,158,11,.25);animation:dmoLate 2.4s ease-in-out infinite;flex:none}
+  .dmo-q:hover{background:#D97706}@keyframes dmoLate{0%,100%{box-shadow:0 0 0 3px rgba(245,158,11,.25)}50%{box-shadow:0 0 0 7px rgba(245,158,11,.08)}}
+  .dmo-pop{position:fixed;z-index:2147483001;max-width:min(380px,calc(100vw - 24px));background:#fff;color:#1f2937;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.28);
+    padding:14px 16px 12px;font:14px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;border-top:5px solid #F59E0B}
+  .dmo-pop h4{margin:0 0 6px;font-size:15px}.dmo-pop p{margin:0 0 8px}.dmo-pop .dmo-como{background:#FFFBEB;border-radius:8px;padding:8px 10px;font-size:13px}
+  .dmo-pop .dmo-x{all:unset;cursor:pointer;position:absolute;right:10px;top:8px;font-size:18px;color:#6B7280}
+  .dmo-panel{position:fixed;right:14px;bottom:70px;z-index:2147483001;width:min(360px,calc(100vw - 28px));max-height:min(70vh,560px);overflow:auto;background:#fff;color:#1f2937;
+    border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.28);font:14px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif}
+  .dmo-panel header{position:sticky;top:0;background:#111827;color:#fff;padding:12px 14px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+  .dmo-panel header button{all:unset;cursor:pointer;font-size:18px}
+  .dmo-panel .dmo-int{padding:10px 14px;background:#FFFBEB;font-size:13px}
+  .dmo-panel ol{margin:0;padding:6px 8px 10px 8px;list-style:none;counter-reset:d}
+  .dmo-panel li{counter-increment:d}.dmo-panel li button{all:unset;box-sizing:border-box;display:flex;gap:10px;width:100%;padding:9px 8px;border-radius:10px;cursor:pointer}
+  .dmo-panel li button:hover{background:#F3F4F6}.dmo-panel li button::before{content:counter(d);flex:none;width:22px;height:22px;border-radius:50%;background:#F59E0B;color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px}
+  .dmo-panel li small{display:block;color:#6B7280}
+  .dmo-foco{outline:3px solid #F59E0B!important;outline-offset:4px!important;border-radius:8px;transition:outline-color .3s}
+  @media print{.dmo-banda,.dmo-q,.dmo-pop,.dmo-panel{display:none!important}}`;
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let pop = null, panel = null, ITEMS = [];
+  function cerrarPop() { if (pop) { pop.remove(); pop = null; } document.querySelectorAll('.dmo-foco').forEach(e => e.classList.remove('dmo-foco')); }
+  function mostrar(it, ancla) {
+    cerrarPop();
+    pop = document.createElement('div'); pop.className = 'dmo-pop'; pop.setAttribute('role', 'dialog');
+    pop.innerHTML = '<button class="dmo-x" aria-label="Cerrar">×</button><h4>' + esc(it.titulo) + '</h4><p>' + it.texto + '</p>' + (it.como ? '<div class="dmo-como"><b>Cómo se hace:</b> ' + it.como + '</div>' : '');
+    document.body.appendChild(pop);
+    pop.querySelector('.dmo-x').onclick = cerrarPop;
+    const r = ancla ? ancla.getBoundingClientRect() : null, w = pop.offsetWidth, h = pop.offsetHeight;
+    let x = r ? r.left : (innerWidth - w) / 2, y = r ? r.bottom + 8 : (innerHeight - h) / 2;
+    if (y + h > innerHeight - 10) y = Math.max(10, (r ? r.top : innerHeight) - h - 8);
+    x = Math.max(10, Math.min(x, innerWidth - w - 10));
+    pop.style.left = x + 'px'; pop.style.top = y + 'px';
+  }
+  function visible(el) { return el && el.offsetParent !== null && el.getClientRects().length; }
+  function poner() {
+    ITEMS.forEach((it, i) => {
+      document.querySelectorAll(it.sel).forEach(el => {
+        if (it.contiene && !(el.textContent || '').includes(it.contiene)) return;
+        if (el.dataset.dmo === String(i) || el.querySelector(':scope > .dmo-q[data-i="' + i + '"]')) return;
+        el.dataset.dmo = String(i);
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'dmo-q'; b.dataset.i = i; b.textContent = '?'; b.title = 'Qué es esto: ' + it.titulo;
+        b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); mostrar(it, b); });
+        if (it.donde === 'antes') el.parentNode.insertBefore(b, el); else if (it.donde === 'despues') el.after(b); else el.appendChild(b);
+      });
+    });
+  }
+  function abrirPanel() {
+    if (panel) { panel.remove(); panel = null; return; }
+    panel = document.createElement('div'); panel.className = 'dmo-panel';
+    panel.innerHTML = '<header>📘 Guía de la demostración<button aria-label="Cerrar">×</button></header><div class="dmo-int">' + (window.__DEMO_INTRO || 'Pulsa los círculos <b>?</b> que verás junto a cada apartado, o elige uno aquí.') + '</div><ol>' +
+      ITEMS.map((it, i) => '<li><button data-i="' + i + '"><span><b>' + esc(it.titulo) + '</b>' + (it.donde_txt ? '<small>' + esc(it.donde_txt) + '</small>' : '') + '</span></button></li>').join('') + '</ol>';
+    document.body.appendChild(panel);
+    panel.querySelector('header button').onclick = abrirPanel;
+    panel.addEventListener('click', e => {
+      const b = e.target.closest('li button'); if (!b) return; const it = ITEMS[+b.dataset.i];
+      if (innerWidth < 1500) abrirPanel();
+      if (it.ir) { try { it.ir(); } catch (er) {} }
+      setTimeout(() => {
+        const el = [...document.querySelectorAll(it.sel)].find(e => visible(e) && (!it.contiene || (e.textContent || '').includes(it.contiene)));
+        if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('dmo-foco'); setTimeout(() => mostrar(it, el.querySelector('.dmo-q') || el), 450); }
+        else mostrar(it, null);
+      }, it.ir ? 500 : 0);
+    });
+  }
+  window.DEMO = {
+    activo: false, MockFS, MockRTDB, MockAuth,
+    iniciar(opciones) {
+      this.activo = true; window._demo = true; ITEMS = opciones.guia || []; window.__DEMO_INTRO = opciones.intro;
+      const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
+      const bn = document.createElement('div'); bn.className = 'dmo-banda';
+      bn.innerHTML = '<span>🧪 <b>Modo demostración</b> · datos inventados · no se guarda nada</span><button type="button" class="dmo-guia">📘 Guía</button><button type="button" class="dmo-salir">Salir</button>';
+      document.body.appendChild(bn);
+      bn.querySelector('.dmo-guia').onclick = abrirPanel;
+      bn.querySelector('.dmo-salir').onclick = () => { location.href = location.pathname; };
+      document.addEventListener('click', e => { if (pop && !pop.contains(e.target) && !e.target.closest('.dmo-q')) cerrarPop(); });
+      new MutationObserver(() => { clearTimeout(this._t); this._t = setTimeout(poner, 120); }).observe(document.body, { childList: true, subtree: true });
+      poner(); setTimeout(abrirPanel, 900);
+    },
+    boton(texto) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'dmo-entrar';
+      b.textContent = texto || '🧪 Ver una demostración con datos de ejemplo';
+      b.style.cssText = 'display:block;width:100%;margin:12px 0 0;padding:12px 14px;border-radius:12px;border:2px dashed #F59E0B;background:#FFFBEB;color:#92400E;font:700 15px system-ui,sans-serif;cursor:pointer';
+      return b;
+    }
+  };
+})();
+
+</script>
+<script>
+/* ══════════ MODO DEMOSTRACIÓN · Convivencia+ ══════════ */
+(function () {
+  function rng(s) { let x = s; return () => (x = (x * 1664525 + 1013904223) % 4294967296) / 4294967296; }
+  const SIGLAS = ['AB', 'CD', 'EF', 'GH', 'IJ', 'KL', 'MN', 'OP', 'QR', 'ST', 'UV', 'WX', 'YZ', 'BC', 'DE', 'FG'];
+  function datos() {
+    const r = rng(2026), CURSO = '2026-2027';
+    const clases = {}, resp = {}, docente = {};
+    ['1', '2', '3', '4', '5', '6'].forEach((c, ci) => {
+      const n = 12 + (ci % 3);
+      const al = SIGLAS.slice(0, n).map((s, i) => s + (ci ? '' : '') );
+      clases[c] = { alumnos: al };
+      // grupos de amistad de 3-4, un líder por grupo, un aislado y (en 5.º) alguien que molesta
+      const grupos = []; for (let i = 0; i < n - 1; i += 4) grupos.push(al.slice(i, Math.min(i + 4, n - 1)));
+      const aislado = al[n - 1], lider = al[1], molesta = ci === 4 ? al[4] : (ci === 2 ? al[6] : null), victima = ci === 4 ? al[9] : null;
+      ['nov', 'abril'].forEach((ses, si) => {
+        if (si === 1 && ci < 3) return;   // abril solo en 4.º, 5.º y 6.º
+        al.forEach((a, i) => {
+          if (r() < 0.06) return; // alguno no contesta
+          const mio = grupos.find(g => g.includes(a)) || [];
+          const amig = mio.filter(x => x !== a).slice(0, 2).concat([lider]).filter((x, k, arr) => x !== a && arr.indexOf(x) === k).slice(0, 3);
+          const otros = al.filter(x => x !== a && x !== aislado);
+          const pick = k => { const o = []; while (o.length < k) { const x = otros[Math.floor(r() * otros.length)]; if (!o.includes(x)) o.push(x); } return o; };
+          const esAis = a === aislado, esVic = a === victima;
+          const mejora = si === 1 ? 1 : 0;
+          const rp = {
+            bienestar: esAis ? 2 + mejora : esVic ? 2 + mejora : 3 + Math.round(r() * 2),
+            amigos: esAis ? pick(2) : amig,
+            trabajo: esAis ? pick(1) : [lider].concat(pick(2)).filter((x, k, arr) => x !== a && arr.indexOf(x) === k).slice(0, 3),
+            ayuda: [lider, al[(i + 5) % n]].filter(x => x !== a).slice(0, 2),
+            excluido: esAis ? 4 - mejora : esVic ? 4 : 1 + Math.round(r() * 1.5),
+            conflictos: ci === 4 ? 3 - mejora : 2 + Math.round(r()),
+            molestias: (molesta && a !== molesta && r() < (si ? 0.15 : 0.4)) ? [molesta] : (esVic && molesta ? [molesta] : []),
+            intimida: (molesta && a !== molesta && r() < (si ? 0.12 : 0.35)) ? [molesta] : [],
+            respeto: esAis ? 3 : esVic ? 2 + mejora : 3 + Math.round(r() * 2),
+            lider: [lider, al[(i + 2) % n]].filter(x => x !== a).slice(0, 2),
+            seguridad: esVic ? 3 + mejora : 4 + Math.round(r())
+          };
+          resp['r' + c + ses + i] = { alumno: a, clase: c, sesion: ses, curso: CURSO, timestamp: '2026-11-1' + (ci % 9) + 'T10:00:00Z', respuestas: rp };
+        });
+      });
+      if (ci === 4) docente['5_nov'] = { [al[4]]: { q1: true, q2: true }, [al[9]]: { q3: true }, [aislado]: { q4: true } };
+    });
+    return {
+      cv_clases: clases, cv_respuestas: resp, cv_docente: docente,
+      cv_config: { centro: { curso: CURSO } },
+      cv_acceso: { demo: { nombre: 'Demostración, Docente', rol: 'super' } }
+    };
+  }
+  window.entrarDemo = function () {
+    if (window.DEMO.activo) return;
+    db = window.DEMO.MockFS(datos()); fbOk = true;
+    const auth = window.DEMO.MockAuth();
+    if (typeof firebase !== 'undefined') firebase.auth = () => auth; else window.firebase = { auth: () => auth, apps: [1] };
+    _fichaAcceso = { nombre: 'Demostración, Docente', rol: 'super' };
+    SCHOOL = 'CEIP Ejemplo'; YEAR = CURSO_CENTRO = '2026-2027';
+    isSuperUser = true; currentRole = 'super'; studentUnlocked = true;
+    window.cvMigrarASiglas = async () => {};
+    showScreen('dashboard'); try { cvPintarSelectorCurso(); updateRoleBadge(); } catch (e) {}
+    const sc = document.getElementById('dashClass'); if (sc) sc.value = '5';
+    loadDash();
+    window.DEMO.iniciar({
+      intro: 'Estás dentro de Convivencia+ con un colegio inventado de 1.º a 6.º. Mira sobre todo <b>5.º · Noviembre</b>: hay un líder, un alumno aislado y un caso de posible acoso. Pulsa los <b>?</b> para saber qué hace cada parte.',
+      guia: [
+        { sel: '#dashClass', donde: 'despues', titulo: 'Elegir la clase y el momento', texto: 'El cuestionario se pasa dos veces al curso, en <b>noviembre</b> y en <b>abril</b>, para ver si las medidas han funcionado. Sin clase elegida verás el resumen de todo el centro.', como: 'Elige «5º» y «Noviembre». Después prueba «Abril» y compara.' },
+        { sel: '.stats-grid', donde: 'antes', titulo: 'Los datos de un vistazo', texto: 'Cuántos han contestado, el <b>clima de aula</b> (media de cómo se sienten, sobre 5) y cuántos líderes, aislados y alumnos en riesgo ha detectado la app.', como: 'La app lo calcula sola a partir de las respuestas del alumnado.' },
+        { sel: '.alert-banner h4', titulo: 'Situaciones de atención', texto: 'Aquí salen los alumnos que la app marca como posible acoso o situación de riesgo. Es una señal para mirar con atención, <b>no un diagnóstico</b>.', como: 'Sale cuando varios compañeros nombran a la misma persona en «¿Quién se mete contigo?» o «¿Quién intimida?».' },
+        { sel: '.ai-title', titulo: 'Informe con IA', texto: 'Prepara un texto con los índices y los perfiles del grupo, <b>solo con siglas</b>, para que Gemini o Claude redacten el informe para orientación y un resumen para la tutora.', como: 'Pulsa «Copiar prompt», pégalo en la IA y pídele el informe.' },
+        { sel: '.panel-title', contiene: 'Clima emocional', titulo: 'Gráfica: clima emocional', texto: 'Media de las preguntas de bienestar, seguridad, respeto, exclusión y conflictos. Las barras bajas indican dónde hay que trabajar.', como: 'Sale de las preguntas con caritas del cuestionario.' },
+        { sel: '.panel-title', contiene: 'Roles detectados', titulo: 'Gráfica: roles', texto: 'Cuántos alumnos hay de cada tipo: líderes, integrados, aislados, en conflicto o en riesgo.', como: 'Se calcula con las veces que cada alumno es elegido o rechazado por sus compañeros.' },
+        { sel: '.panel-title', contiene: 'Sociograma', titulo: 'El sociograma', texto: 'Cada círculo es un alumno; las flechas, a quién elige. Los que reciben muchas flechas están en el centro (líderes); los que no reciben ninguna, en el borde (aislados). Las líneas rojas son rechazos.', como: 'Se dibuja solo. Puedes descargarlo como imagen.' },
+        { sel: '.panel-title', contiene: 'Perfiles individuales', titulo: 'Perfiles individuales', texto: 'Una ficha por alumno: a quién elige, quién le elige, si alguien le molesta y cómo se siente.', como: 'Busca al alumno aislado (💙) y mira que nadie le ha elegido.' },
+        { sel: '.panel-title', contiene: 'Observación docente', titulo: 'Observación docente', texto: 'La tutora añade lo que ve en clase (partes, malestar, aislamiento…). La app lo combina con las respuestas para afinar los roles.', como: 'Marca los botones de un alumno y pulsa Guardar: verás cómo cambia su perfil.' },
+        { sel: '#indicesPanel .panel-title, #indicesPanel h3', titulo: 'Índices sociométricos', texto: 'Cohesión, integración y rechazo del grupo, con su valor de referencia. Son los números que suelen pedir orientación y la inspección.', como: 'Se calculan solos. Verde: bien; ámbar: mejorable; rojo: atender.' },
+        { sel: '.panel-title', contiene: 'Formador de grupos', titulo: 'Formador de grupos y sitios', texto: 'Propone grupos de trabajo y parejas de mesa equilibrados: cada aislado junto a alguien que le eligió, y separando a quien tiene conflictos.', como: 'Elige el tamaño del grupo y pulsa para generar. Se puede imprimir.' }
+      ]
+    });
+  };
+  function ponerBoton() {
+    const ok = document.getElementById('btnLoginDocente'); if (!ok || document.querySelector('.dmo-entrar')) return;
+    const b = window.DEMO.boton(); b.onclick = () => window.entrarDemo(); ok.after(b);
+    const casa = document.querySelector('#home .home-btns, #home .btn-group, #home');
+    if (casa && !casa.querySelector('.dmo-entrar')) { const b2 = window.DEMO.boton('🧪 Ver la demostración (sin usuario)'); b2.onclick = () => window.entrarDemo(); b2.style.maxWidth = '420px'; b2.style.margin = '14px auto 0'; casa.appendChild(b2); }
+  }
+  ponerBoton();
+  if (/[?&]demo\b/.test(location.search)) setTimeout(window.entrarDemo, 600);
+})();
+
+</script>
+<!-- /DEMO -->
 </body>
 </html>
