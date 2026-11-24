@@ -3178,13 +3178,13 @@ window.addEventListener('DOMContentLoaded',()=>{
 <script>
 // ── Aviso de novedades (una sola vez en cada dispositivo) ──
 (function(){
-  const ID='convivencia-nov-2026-11-18-demo';
+  const ID='convivencia-nov-2026-11-24-demo-boton';
   if(/[?&]demo\b/.test(location.search)) return;
   try{ if(localStorage.getItem(ID)) return; }catch(e){ return; }
   const d=document.createElement('div');
   d.setAttribute('role','dialog'); d.setAttribute('aria-label','Novedades');
   d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px';
-  d.innerHTML='<div style="background:#fff;max-width:420px;width:100%;border-radius:16px;padding:22px;font-family:inherit;box-shadow:0 20px 50px rgba(0,0,0,.25)"><div style="font-weight:800;font-size:1.2rem;margin-bottom:8px">🧪 Novedades</div><p style="margin:0 0 14px;line-height:1.5">Nuevo <b>modo demostración</b>: en la entrada, «Ver una demostración» abre la app con un colegio inventado y una guía que explica cada gráfica. No guarda nada.</p><button style="width:100%;padding:12px;border:0;border-radius:10px;background:#4f46e5;color:#fff;font-weight:800;font-size:1rem;cursor:pointer">Entendido</button></div>';
+  d.innerHTML='<div style="background:#fff;max-width:420px;width:100%;border-radius:16px;padding:22px;font-family:inherit;box-shadow:0 20px 50px rgba(0,0,0,.25)"><div style="font-weight:800;font-size:1.2rem;margin-bottom:8px">🧪 Novedades</div><p style="margin:0 0 14px;line-height:1.5">Arreglado el botón <b>«Ver la demostración (sin usuario)»</b> de la pantalla de entrada: ya se puede pulsar.</p><button style="width:100%;padding:12px;border:0;border-radius:10px;background:#4f46e5;color:#fff;font-weight:800;font-size:1rem;cursor:pointer">Entendido</button></div>';
   d.querySelector('button').onclick=()=>{ try{localStorage.setItem(ID,'1');}catch(e){} d.remove(); };
   document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(d));
   if(document.readyState!=='loading') document.body.appendChild(d);
@@ -3499,7 +3499,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     const ok = document.getElementById('btnLoginDocente'); if (!ok || document.querySelector('.dmo-entrar')) return;
     const b = window.DEMO.boton(); b.onclick = () => window.entrarDemo(); ok.after(b);
     const casa = document.querySelector('#home .home-btns, #home .btn-group, #home');
-    if (casa && !casa.querySelector('.dmo-entrar')) { const b2 = window.DEMO.boton('🧪 Ver la demostración (sin usuario)'); b2.onclick = () => window.entrarDemo(); b2.style.maxWidth = '420px'; b2.style.margin = '14px auto 0'; casa.appendChild(b2); }
+    if (casa && !casa.querySelector('.dmo-entrar')) { const b2 = window.DEMO.boton('🧪 Ver la demostración (sin usuario)'); b2.onclick = () => window.entrarDemo(); b2.style.maxWidth = '420px'; b2.style.margin = '14px auto 0'; b2.style.position = 'relative'; b2.style.zIndex = '2'; (casa.querySelector('.home-wrap') || casa).appendChild(b2); }
   }
   ponerBoton();
   if (/[?&]demo\b/.test(location.search)) setTimeout(window.entrarDemo, 600);
